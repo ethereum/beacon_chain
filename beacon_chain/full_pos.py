@@ -2,16 +2,18 @@ try:
     from hashlib import blake2s
 except:
     from pyblake2 import blake2s
+
+from beacon_chain.bls import aggregate_pubs, verify, sign
+from beacon_chain.simpleserialize import deepcopy, serialize
+
+
 blake = lambda x: blake2s(x).digest()
-import bls
-import random
-from bls import decompress_G1, aggregate_pubs, verify, sign, privtopub
-from simpleserialize import deepcopy, serialize, to_dict
 
 
 SHARD_COUNT = 20
 ATTESTER_COUNT = 32
 DEFAULT_BALANCE = 20000
+
 
 class AggregateVote():
     fields = {
@@ -24,7 +26,7 @@ class AggregateVote():
         'shard_id': 0,
         'checkpoint_hash': b'\x00'*32,
         'signer_bitmask': b'',
-        'aggregate_sig': [0,0],
+        'aggregate_sig': [0, 0],
     }
 
     def __init__(self, **kwargs):
@@ -32,8 +34,8 @@ class AggregateVote():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
+
 class Block():
-    
     fields = {
         # Hash of the parent block
         'parent_hash': 'hash32',
@@ -60,11 +62,11 @@ class Block():
         'skip_count': 0,
         'randao_reveal': b'\x00'*32,
         'attestation_bitmask': b'',
-        'attestation_aggregate_sig': [0,0],
+        'attestation_aggregate_sig': [0, 0],
         'shard_aggregate_votes': [],
         'main_chain_ref': b'\x00'*32,
         'state_hash': b'\x00'*32,
-        'sig': [0,0]
+        'sig': [0, 0]
     }
 
     def __init__(self, **kwargs):
@@ -73,12 +75,12 @@ class Block():
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
     def sign(self, key):
-        self.sig = [0,0]
+        self.sig = [0, 0]
         self.sig = list(sign(serialize(self), key))
 
     def verify(self, pub):
         zig = self.sig
-        self.sig = [0,0]
+        self.sig = [0, 0]
         o = verify(serialize(self), pub, tuple(zig))
         self.sig = zig
         return o
@@ -87,10 +89,12 @@ class Block():
     def hash(self):
         return blake(serialize(self))
 
+
 def get_shuffling(seed, validator_count, sample=None):
     assert validator_count <= 16777216
     rand_max = 16777216 - 16777216 % validator_count
-    o = list(range(validator_count)); source = seed
+    o = list(range(validator_count))
+    source = seed
     i = 0
     maxvalue = sample if sample is not None else validator_count
     while i < maxvalue:
@@ -105,6 +109,7 @@ def get_shuffling(seed, validator_count, sample=None):
                 o[i], o[replacement_pos] = o[replacement_pos], o[i]
                 i += 1
     return o[:maxvalue]
+
 
 class ValidatorRecord():
     fields = {
@@ -127,6 +132,7 @@ class ValidatorRecord():
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
+
 
 class CheckpointRecord():
 
@@ -162,14 +168,20 @@ class ActiveState():
         # Total number of skips (used to determine minimum timestamp)
         'total_skip_count': 'int64'
     }
-    defaults = {'height': 0, 'randao': b'\x00'*32,
-        'ffg_voter_bitmask': b'', 'balance_deltas': [],
-        'checkpoints': [], 'total_skip_count': 0}
+    defaults = {
+        'height': 0,
+        'randao': b'\x00'*32,
+        'ffg_voter_bitmask': b'',
+        'balance_deltas': [],
+        'checkpoints': [],
+        'total_skip_count': 0
+    }
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
+
 
 class CrosslinkRecord():
     fields = {
@@ -184,7 +196,8 @@ class CrosslinkRecord():
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
-                                        
+
+
 class CrystallizedState():
     fields = {
         # List of active validators
@@ -213,23 +226,26 @@ class CrystallizedState():
         # Total balance of deposits
         'total_deposits': 'int256'
     }
-    defaults = {'active_validators': [],
-               'queued_validators': [],
-               'exited_validators': [],
-               'current_shuffling': ['int24'],
-               'current_epoch': 0,
-               'last_justified_epoch': 0,
-               'last_finalized_epoch': 0,
-               'dynasty': 0,
-               'next_shard': 0,
-               'current_checkpoint': b'\x00'*32,
-               'crosslink_records': [],
-               'total_deposits': 0}
+    defaults = {
+        'active_validators': [],
+        'queued_validators': [],
+        'exited_validators': [],
+        'current_shuffling': ['int24'],
+        'current_epoch': 0,
+        'last_justified_epoch': 0,
+        'last_finalized_epoch': 0,
+        'dynasty': 0,
+        'next_shard': 0,
+        'current_checkpoint': b'\x00'*32,
+        'crosslink_records': [],
+        'total_deposits': 0
+    }
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
+
 
 def get_checkpoint_aggvote_msg(shard_id, checkpoint_hash, crystallized_state):
     return shard_id.to_bytes(2, 'big') + \
@@ -238,15 +254,21 @@ def get_checkpoint_aggvote_msg(shard_id, checkpoint_hash, crystallized_state):
         crystallized_state.current_epoch.to_bytes(8, 'big') + \
         crystallized_state.last_justified_epoch.to_bytes(8, 'big')
 
+
 def get_attesters_and_signer(crystallized_state, active_state, skip_count):
     attestation_count = min(len(crystallized_state.active_validators), ATTESTER_COUNT)
     indices = get_shuffling(active_state.randao, len(crystallized_state.active_validators),
                             attestation_count + skip_count + 1)
     return indices[:attestation_count], indices[-1]
 
+
 def get_shard_attesters(crystallized_state, shard_id):
     vc = len(crystallized_state.active_validators)
-    return crystallized_state.current_shuffling[(vc * shard_id) // SHARD_COUNT: (vc * (shard_id + 1)) // SHARD_COUNT]
+    start_index = (vc * shard_id) // SHARD_COUNT
+    end_index = (vc * (shard_id + 1)) // SHARD_COUNT
+
+    return crystallized_state.current_shuffling[start_index:end_index]
+
 
 def compute_state_transition(parent_state, parent_block, block, verify_sig=True):
     crystallized_state, active_state = parent_state
@@ -287,7 +309,7 @@ def compute_state_transition(parent_state, parent_block, block, verify_sig=True)
         main_crosslink = {}
         for c in active_state.checkpoints:
             vote_count = 0
-            mask =  bytearray(c.voter_bitmask)
+            mask = bytearray(c.voter_bitmask)
             for byte in mask:
                 for j in range(8):
                     vote_count += (byte >> j) % 2
@@ -396,7 +418,7 @@ def compute_state_transition(parent_state, parent_block, block, verify_sig=True)
 
     # Verify the attestations of checkpoint hashes
     checkpoint_votes = {vote.checkpoint_hash + vote.shard_id.to_bytes(2, 'big'):
-                        vote.voter_bitmask for vote in active_state.checkpoints} 
+                        vote.voter_bitmask for vote in active_state.checkpoints}
     new_ffg_bitmask = bytearray(active_state.ffg_voter_bitmask)
     for vote in block.shard_aggregate_votes:
         attestation = get_checkpoint_aggvote_msg(vote.shard_id, vote.checkpoint_hash, crystallized_state)

@@ -1,2 +1,4 @@
 *.pyc
+venv
 .DS_Store
+.pytest_cache
