@@ -7,10 +7,10 @@ from beacon_chain.utils import (
 from beacon_chain.simpleserialize import serialize
 
 
-def test_all(genesis_crystallized_state,
-             genesis_active_state,
-             genesis_block,
-             mock_make_child):
+def test_integration(genesis_crystallized_state,
+                     genesis_active_state,
+                     genesis_block,
+                     mock_make_child):
     c = genesis_crystallized_state
     a = genesis_active_state
     block = genesis_block
