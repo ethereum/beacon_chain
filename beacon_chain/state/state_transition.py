@@ -23,6 +23,7 @@ ATTESTER_COUNT = 32
 SHARD_COUNT = 20
 DEFAULT_BALANCE = 20000
 DEFAULT_SWITCH_DYNASTY = 9999999999999999999
+MAX_VALIDATORS = 2**24
 
 
 def state_hash(crystallized_state, active_state):
@@ -30,8 +31,8 @@ def state_hash(crystallized_state, active_state):
 
 
 def get_shuffling(seed, validator_count, sample=None):
-    assert validator_count <= 16777216
-    rand_max = 16777216 - 16777216 % validator_count
+    assert validator_count <= MAX_VALIDATORS
+    rand_max = MAX_VALIDATORS - MAX_VALIDATORS % validator_count
     o = list(range(validator_count))
     source = seed
     i = 0
@@ -60,8 +61,11 @@ def get_crosslink_aggvote_msg(shard_id, shard_block_hash, crystallized_state):
 
 def get_attesters_and_signer(crystallized_state, active_state, skip_count):
     attestation_count = min(len(crystallized_state.active_validators), ATTESTER_COUNT)
-    indices = get_shuffling(active_state.randao, len(crystallized_state.active_validators),
-                            attestation_count + skip_count + 1)
+    indices = get_shuffling(
+        active_state.randao,
+        len(crystallized_state.active_validators),
+        attestation_count + skip_count + 1
+    )
     return indices[:attestation_count], indices[-1]
 
 
@@ -169,10 +173,10 @@ def process_crosslinks(crystallized_state, crosslinks):
 def process_balance_deltas(crystallized_state, balance_deltas):
     deltas = [0] * len(crystallized_state.active_validators)
     for i in balance_deltas:
-        if i % 16777216 < 8388608:
-            deltas[i >> 24] += i & 16777215
+        if i % MAX_VALIDATORS < (MAX_VALIDATORS / 2):
+            deltas[i >> 24] += i & (MAX_VALIDATORS - 1)
         else:
-            deltas[i >> 24] += (i & 16777215) - 16777216
+            deltas[i >> 24] += (i & (MAX_VALIDATORS - 1)) - MAX_VALIDATORS
     print('Total deposit change from deltas: %d' % sum(deltas))
     return deltas
 
@@ -331,15 +335,21 @@ def _compute_new_active_state(crystallized_state,
                               block,
                               verify_sig=True):
     # Determine who the attesters and the main signer are
-    attestation_indices, main_signer = \
-        get_attesters_and_signer(crystallized_state, active_state, block.skip_count)
+    attestation_indices, main_signer = get_attesters_and_signer(
+        crystallized_state,
+        active_state,
+        block.skip_count
+    )
 
     # Verify attestations
-    balance_deltas = process_attestations(crystallized_state.active_validators,
-                                          attestation_indices,
-                                          block.attestation_bitmask,
-                                          serialize(parent_block),
-                                          block.attestation_aggregate_sig)
+    balance_deltas = process_attestations(
+        crystallized_state.active_validators,
+        attestation_indices,
+        block.attestation_bitmask,
+        serialize(parent_block),
+        block.attestation_aggregate_sig
+    )
+
     # Reward main signer
     balance_deltas.append((main_signer << 24) + len(balance_deltas))
 
@@ -357,10 +367,13 @@ def _compute_new_active_state(crystallized_state,
     )
     balance_deltas.append((main_signer << 24) + voters)
 
+    updated_randao = (
+        int.from_bytes(active_state.randao, 'big') ^ int.from_bytes(block.randao_reveal, 'big')
+    ).to_bytes(32, 'big')
+
     return ActiveState(
         height=active_state.height + 1,
-        randao=(int.from_bytes(active_state.randao, 'big') ^
-                int.from_bytes(block.randao_reveal, 'big')).to_bytes(32, 'big'),
+        randao=updated_randao,
         total_skip_count=active_state.total_skip_count + block.skip_count,
         partial_crosslinks=new_crosslink_records,
         ffg_voter_bitmask=new_ffg_bitmask,
@@ -370,12 +383,12 @@ def _compute_new_active_state(crystallized_state,
 
 def compute_state_transition(parent_state, parent_block, block, verify_sig=True):
     crystallized_state, active_state = parent_state
+
     # Initialize a new epoch if needed
     if active_state.height % SHARD_COUNT == 0:
         crystallized_state, active_state = _initialize_new_epoch(crystallized_state, active_state)
 
-    # ** Process the block-by-block stuff **
-    new_active_state = _compute_new_active_state(
+    active_state = _compute_new_active_state(
         crystallized_state,
         active_state,
         parent_block,
@@ -383,4 +396,4 @@ def compute_state_transition(parent_state, parent_block, block, verify_sig=True)
         verify_sig
     )
 
-    return crystallized_state, new_active_state
+    return crystallized_state, active_state
