@@ -1,4 +1,4 @@
-from .checkpoint_record import CheckpointRecord
+from .partial_crosslink_record import PartialCrosslinkRecord
 
 
 class ActiveState():
@@ -11,9 +11,9 @@ class ActiveState():
         # Which validators have made FFG votes this epoch (as a bitmask)
         'ffg_voter_bitmask': 'bytes',
         # Deltas to validator balances (to be processed at end of epoch)
-        'balance_deltas': ['int32'],
+        'balance_deltas': ['int48'],
         # Storing data about crosslinks-in-progress attempted in this epoch
-        'checkpoints': [CheckpointRecord],
+        'partial_crosslinks': [PartialCrosslinkRecord],
         # Total number of skips (used to determine minimum timestamp)
         'total_skip_count': 'int64'
     }
@@ -22,7 +22,7 @@ class ActiveState():
         'randao': b'\x00'*32,
         'ffg_voter_bitmask': b'',
         'balance_deltas': [],
-        'checkpoints': [],
+        'partial_crosslinks': [],
         'total_skip_count': 0
     }
 

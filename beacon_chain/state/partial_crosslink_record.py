@@ -1,11 +1,11 @@
 
-class CheckpointRecord():
+class PartialCrosslinkRecord():
 
     fields = {
         # What shard is the crosslink being made for
         'shard_id': 'int16',
         # Hash of the block
-        'checkpoint_hash': 'hash32',
+        'shard_block_hash': 'hash32',
         # Which of the eligible voters are voting for it (as a bitmask)
         'voter_bitmask': 'bytes'
     }

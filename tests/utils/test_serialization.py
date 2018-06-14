@@ -3,8 +3,8 @@ import pytest
 from beacon_chain.state.active_state import (
     ActiveState,
 )
-from beacon_chain.state.checkpoint_record import (
-    CheckpointRecord,
+from beacon_chain.state.partial_crosslink_record import (
+    PartialCrosslinkRecord,
 )
 from beacon_chain.utils.simpleserialize import (
     serialize,
@@ -34,8 +34,12 @@ def test_active_state_serialization():
     assert eq(s, ds)
 
     s = ActiveState(
-        checkpoints=[
-            CheckpointRecord(shard_id=42, checkpoint_hash=b'\x55'*32, voter_bitmask=b'31337dawg')
+        partial_crosslinks=[
+            PartialCrosslinkRecord(
+                shard_id=42,
+                shard_block_hash=b'\x55'*32,
+                voter_bitmask=b'31337dawg'
+            )
         ],
         height=555,
         randao=b'\x88'*32,
