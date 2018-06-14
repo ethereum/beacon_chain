@@ -1,6 +1,6 @@
 import pytest
 
-from beacon_chain.bls import (
+from beacon_chain.utils.bls import (
     G1,
     G2,
     hash_to_G2,

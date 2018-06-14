@@ -1,16 +1,27 @@
-import beacon_chain.bls as bls
-from beacon_chain.blake import blake
-from beacon_chain.full_pos import (
-    ActiveState,
-    Block,
-    CheckpointRecord,
-    CrosslinkRecord,
-    CrystallizedState,
-    ValidatorRecord,
-)
-from beacon_chain.simpleserialize import (
+import beacon_chain.utils.bls as bls
+from beacon_chain.utils.blake import blake
+from beacon_chain.utils.simpleserialize import (
     deepcopy,
     serialize,
+)
+
+from .active_state import (
+    ActiveState,
+)
+from .block import (
+    Block,
+)
+from .checkpoint_record import (
+    CheckpointRecord,
+)
+from .crosslink_record import (
+    CrosslinkRecord,
+)
+from .crystallized_state import (
+    CrystallizedState,
+)
+from .validator_record import (
+    ValidatorRecord,
 )
 
 

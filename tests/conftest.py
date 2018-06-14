@@ -1,9 +1,27 @@
 import pytest
 import random
 
-import beacon_chain.bls as bls
-from beacon_chain.blake import blake
-from beacon_chain.utils import (
+import beacon_chain.utils.bls as bls
+from beacon_chain.utils.blake import blake
+from beacon_chain.state.active_state import (
+    ActiveState,
+)
+from beacon_chain.state.aggregate_vote import (
+    AggregateVote,
+)
+from beacon_chain.state.block import (
+    Block,
+)
+from beacon_chain.state.crosslink_record import (
+    CrosslinkRecord,
+)
+from beacon_chain.state.crystallized_state import (
+    CrystallizedState,
+)
+from beacon_chain.state.validator_record import (
+    ValidatorRecord,
+)
+from beacon_chain.state.state_transition import (
     DEFAULT_BALANCE,
     DEFAULT_SWITCH_DYNASTY,
     SHARD_COUNT,
@@ -14,15 +32,8 @@ from beacon_chain.utils import (
     get_shuffling,
     state_hash,
 )
-from beacon_chain.full_pos import (
-    ActiveState,
-    AggregateVote,
-    Block,
-    CrosslinkRecord,
-    CrystallizedState,
-    ValidatorRecord,
-)
-from beacon_chain.simpleserialize import serialize
+
+from beacon_chain.utils.simpleserialize import serialize
 
 
 DEFAULT_SHUFFLING_SEED = b'\35'*32

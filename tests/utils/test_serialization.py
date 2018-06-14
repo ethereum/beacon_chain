@@ -1,10 +1,12 @@
 import pytest
 
-from beacon_chain.full_pos import (
+from beacon_chain.state.active_state import (
     ActiveState,
+)
+from beacon_chain.state.checkpoint_record import (
     CheckpointRecord,
 )
-from beacon_chain.simpleserialize import (
+from beacon_chain.utils.simpleserialize import (
     serialize,
     deserialize,
     eq,
