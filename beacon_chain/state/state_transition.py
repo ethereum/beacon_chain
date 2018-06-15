@@ -20,6 +20,7 @@ from .partial_crosslink_record import (
 
 
 ATTESTER_COUNT = 32
+EPOCH_LENGTH = 20
 SHARD_COUNT = 20
 DEFAULT_BALANCE = 20000
 DEFAULT_SWITCH_DYNASTY = 9999999999999999999
@@ -385,7 +386,7 @@ def compute_state_transition(parent_state, parent_block, block, verify_sig=True)
     crystallized_state, active_state = parent_state
 
     # Initialize a new epoch if needed
-    if active_state.height % SHARD_COUNT == 0:
+    if active_state.height % EPOCH_LENGTH == 0:
         crystallized_state, active_state = _initialize_new_epoch(crystallized_state, active_state)
 
     active_state = _compute_new_active_state(

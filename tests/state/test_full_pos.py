@@ -1,7 +1,7 @@
 import time
 
 from beacon_chain.state.state_transition import (
-    SHARD_COUNT,
+    EPOCH_LENGTH,
     compute_state_transition,
 )
 from beacon_chain.utils.simpleserialize import serialize
@@ -26,7 +26,7 @@ def test_state_transition_integration(genesis_crystallized_state,
     print('Verified a block!')
     block3, c3, a3 = mock_make_child((c2, a2), block2, 0, 0.8, [(0, 0.75)])
     print('Verified a block with a committee!')
-    while a3.height % SHARD_COUNT > 0:
+    while a3.height % EPOCH_LENGTH > 0:
         block3, c3, a3 = mock_make_child((c3, a3), block3, 0, 0.8, [(a3.height, 0.6 + 0.02 * a3.height)])
         print('Height: %d' % a3.height)
     print('FFG bitmask:', bin(int.from_bytes(a3.ffg_voter_bitmask, 'big')))
