@@ -360,14 +360,15 @@ def _compute_new_active_state(crystallized_state,
         print('Verified main sig')
 
     # Update crosslink records
-    new_crosslink_records, new_ffg_bitmask, voters = update_ffg_and_crosslink_progress(
+    new_crosslink_records, new_ffg_bitmask, total_new_voters = update_ffg_and_crosslink_progress(
         crystallized_state,
         active_state.partial_crosslinks,
         active_state.ffg_voter_bitmask,
         block.shard_aggregate_votes
     )
-    balance_deltas.append((main_signer << 24) + voters)
+    balance_deltas.append((main_signer << 24) + total_new_voters)
 
+    # TODO: verify randao reveal from validator's hash preimage
     updated_randao = (
         int.from_bytes(active_state.randao, 'big') ^ int.from_bytes(block.randao_reveal, 'big')
     ).to_bytes(32, 'big')
