@@ -14,7 +14,7 @@ class Block():
         # Randao commitment reveal
         'randao_reveal': 'hash32',
         # Bitmask of who participated in the block notarization committee
-        'attestation_bitmask': 'bytes',
+        'attestation_bitfield': 'bytes',
         # Their aggregate sig
         'attestation_aggregate_sig': ['int256'],
         # Shard aggregate votes
@@ -31,7 +31,7 @@ class Block():
         'parent_hash': b'\x00'*32,
         'skip_count': 0,
         'randao_reveal': b'\x00'*32,
-        'attestation_bitmask': b'',
+        'attestation_bitfield': b'',
         'attestation_aggregate_sig': [0, 0],
         'shard_aggregate_votes': [],
         'main_chain_ref': b'\x00'*32,

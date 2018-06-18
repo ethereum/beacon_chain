@@ -208,15 +208,15 @@ def get_incremented_validator_sets(crystallized_state, new_active_validators):
 
 def process_attestations(validator_set,
                          attestation_indices,
-                         attestation_bitmask,
+                         attestation_bitfield,
                          msg,
                          aggregate_sig):
     # Verify the attestations of the parent
     pubs = []
     balance_deltas = []
-    assert len(attestation_bitmask) == (len(attestation_indices) + 7) // 8
+    assert len(attestation_bitfield) == (len(attestation_indices) + 7) // 8
     for i, index in enumerate(attestation_indices):
-        if attestation_bitmask[i//8] & (128 >> (i % 8)):
+        if attestation_bitfield[i//8] & (128 >> (i % 8)):
             pubs.append(validator_set[index].pubkey)
             balance_deltas.append((index << 24) + 1)
     assert len(balance_deltas) <= 128
@@ -346,7 +346,7 @@ def _compute_new_active_state(crystallized_state,
     balance_deltas = process_attestations(
         crystallized_state.active_validators,
         attestation_indices,
-        block.attestation_bitmask,
+        block.attestation_bitfield,
         serialize(parent_block),
         block.attestation_aggregate_sig
     )

@@ -117,7 +117,7 @@ def genesis_block(genesis_crystallized_state, genesis_active_state):
         parent_hash=b'\x00'*32,
         skip_count=0,
         randao_reveal=b'\x00'*32,
-        attestation_bitmask=b'',
+        attestation_bitfield=b'',
         attestation_aggregate_sig=[0, 0],
         shard_aggregate_votes=[],
         main_chain_ref=b'\x00'*32,
@@ -141,10 +141,10 @@ def mock_make_child(keymap):
                 for i in range(len(indices)) if bitfield[i]]
         attestation_aggregate_sig = bls.aggregate_sigs(sigs)
         print('Aggregated sig')
-        attestation_bitmask = bytearray((len(bitfield)-1) // 8 + 1)
+        attestation_bitfield = bytearray((len(bitfield)-1) // 8 + 1)
         for i, b in enumerate(bitfield):
-            attestation_bitmask[i//8] ^= (128 >> (i % 8)) * b
-        print('Aggregate bitmask:', bin(int.from_bytes(attestation_bitmask, 'big')))
+            attestation_bitfield[i//8] ^= (128 >> (i % 8)) * b
+        print('Aggregate bitmask:', bin(int.from_bytes(attestation_bitfield, 'big')))
         # Randomly pick indices to include for crosslinks
         shard_aggregate_votes = []
         for shard, crosslinker_share in crosslink_shards:
@@ -170,7 +170,7 @@ def mock_make_child(keymap):
         o = Block(parent_hash=blake(parent_attestation),
                   skip_count=skips,
                   randao_reveal=blake(str(random.random()).encode('utf-8')),
-                  attestation_bitmask=attestation_bitmask,
+                  attestation_bitfield=attestation_bitfield,
                   attestation_aggregate_sig=list(attestation_aggregate_sig),
                   shard_aggregate_votes=shard_aggregate_votes,
                   main_chain_ref=b'\x00'*32,
