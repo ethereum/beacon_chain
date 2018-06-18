@@ -1,5 +1,5 @@
 # eth2.0 Beacon Chain
-> Implements a proof of concept beacon chain for a sharded pos ethereum 2.0.
+> Implements a proof of concept beacon chain for a sharded pos ethereum 2.0. Spec in progress can be found [here](https://notes.ethereum.org/SCIg8AH5SA-O4C1G1LYZHQ?view).
 
 ## Installation
 Using a python3 environment, run the following to install required libraries:
