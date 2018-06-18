@@ -29,7 +29,7 @@ def test_state_transition_integration(genesis_crystallized_state,
     while a3.height % EPOCH_LENGTH > 0:
         block3, c3, a3 = mock_make_child((c3, a3), block3, 0, 0.8, [(a3.height, 0.6 + 0.02 * a3.height)])
         print('Height: %d' % a3.height)
-    print('FFG bitmask:', bin(int.from_bytes(a3.ffg_voter_bitmask, 'big')))
+    print('FFG bitmask:', bin(int.from_bytes(a3.ffg_voter_bitfield, 'big')))
     block4, c4, a4 = mock_make_child((c3, a3), block3, 1, 0.55, [])
     t = time.time()
     assert compute_state_transition((c3, a3), block3, block4)

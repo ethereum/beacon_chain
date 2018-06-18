@@ -104,7 +104,7 @@ def genesis_active_state(genesis_crystallized_state,
     return ActiveState(
         height=1,
         randao=init_randao,
-        ffg_voter_bitmask=bytearray((len(genesis_crystallized_state.active_validators) + 7) // 8),
+        ffg_voter_bitfield=bytearray((len(genesis_crystallized_state.active_validators) + 7) // 8),
         balance_deltas=[],
         partial_crosslinks=[],
         total_skip_count=0
@@ -144,7 +144,7 @@ def mock_make_child(keymap):
         attestation_bitfield = bytearray((len(bitfield)-1) // 8 + 1)
         for i, b in enumerate(bitfield):
             attestation_bitfield[i//8] ^= (128 >> (i % 8)) * b
-        print('Aggregate bitmask:', bin(int.from_bytes(attestation_bitfield, 'big')))
+        print('Aggregate bitfield:', bin(int.from_bytes(attestation_bitfield, 'big')))
         # Randomly pick indices to include for crosslinks
         shard_aggregate_votes = []
         for shard, crosslinker_share in crosslink_shards:

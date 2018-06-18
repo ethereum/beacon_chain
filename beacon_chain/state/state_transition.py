@@ -79,7 +79,7 @@ def get_shard_attesters(crystallized_state, shard_id):
 
 
 # Get rewards and vote data
-def process_ffg_deposits(crystallized_state, ffg_voter_bitmask):
+def process_ffg_deposits(crystallized_state, ffg_voter_bitfield):
     total_validators = len(crystallized_state.active_validators)
     finality_distance = crystallized_state.current_epoch - crystallized_state.last_finalized_epoch
     online_reward = 6 if finality_distance <= 2 else 0
@@ -88,7 +88,7 @@ def process_ffg_deposits(crystallized_state, ffg_voter_bitmask):
     total_vote_deposits = 0
     deltas = [0] * total_validators
     for i in range(total_validators):
-        if ffg_voter_bitmask[i // 8] & (128 >> (i % 8)):
+        if ffg_voter_bitfield[i // 8] & (128 >> (i % 8)):
             total_vote_deposits += crystallized_state.active_validators[i].balance
             deltas[i] += online_reward
             total_vote_count += 1
@@ -124,7 +124,7 @@ def process_crosslinks(crystallized_state, crosslinks):
     main_crosslink = {}
     for c in crosslinks:
         vote_count = 0
-        mask = bytearray(c.voter_bitmask)
+        mask = bytearray(c.voter_bitfield)
         for byte in mask:
             for j in range(8):
                 vote_count += (byte >> j) % 2
@@ -225,13 +225,13 @@ def process_attestations(validator_set,
     return balance_deltas
 
 
-def update_ffg_and_crosslink_progress(crystallized_state, crosslinks, ffg_voter_bitmask, votes):
+def update_ffg_and_crosslink_progress(crystallized_state, crosslinks, ffg_voter_bitfield, votes):
     # Verify the attestations of crosslink hashes
     crosslink_votes = {
-        vote.shard_block_hash + vote.shard_id.to_bytes(2, 'big'): vote.voter_bitmask
+        vote.shard_block_hash + vote.shard_id.to_bytes(2, 'big'): vote.voter_bitfield
         for vote in crosslinks
     }
-    new_ffg_bitmask = bytearray(ffg_voter_bitmask)
+    new_ffg_bitfield = bytearray(ffg_voter_bitfield)
     total_voters = 0
     for vote in votes:
         attestation = get_crosslink_aggvote_msg(
@@ -243,27 +243,27 @@ def update_ffg_and_crosslink_progress(crystallized_state, crosslinks, ffg_voter_
         votekey = vote.shard_block_hash + vote.shard_id.to_bytes(2, 'big')
         if votekey not in crosslink_votes:
             crosslink_votes[votekey] = bytearray((len(indices) + 7) // 8)
-        bitmask = crosslink_votes[votekey]
+        bitfield = crosslink_votes[votekey]
         pubs = []
         for i, index in enumerate(indices):
             if vote.signer_bitmask[i//8] & (128 >> (i % 8)):
                 pubs.append(crystallized_state.active_validators[index].pubkey)
-                if new_ffg_bitmask[index//8] & (128 >> (index % 8)) == 0:
-                    new_ffg_bitmask[index//8] ^= 128 >> (index % 8)
-                    bitmask[i//8] ^= 128 >> (i % 8)
+                if new_ffg_bitfield[index//8] & (128 >> (index % 8)) == 0:
+                    new_ffg_bitfield[index//8] ^= 128 >> (index % 8)
+                    bitfield[i//8] ^= 128 >> (i % 8)
                     total_voters += 1
         assert bls.verify(attestation, bls.aggregate_pubs(pubs), vote.aggregate_sig)
-        crosslink_votes[votekey] = bitmask
+        crosslink_votes[votekey] = bitfield
         print('Verified aggregate vote')
     new_crosslinks = [
         PartialCrosslinkRecord(
             shard_id=int.from_bytes(h[32:], 'big'),
             shard_block_hash=h[:32],
-            voter_bitmask=crosslink_votes[h]
+            voter_bitfield=crosslink_votes[h]
         )
         for h in sorted(crosslink_votes.keys())
     ]
-    return new_crosslinks, new_ffg_bitmask, total_voters
+    return new_crosslinks, new_ffg_bitfield, total_voters
 
 
 def _initialize_new_epoch(crystallized_state, active_state):
@@ -271,10 +271,10 @@ def _initialize_new_epoch(crystallized_state, active_state):
     # Process rewards from FFG/crosslink votes
     new_validator_records = deepcopy(crystallized_state.active_validators)
     # Who voted in the last epoch
-    ffg_voter_bitmask = bytearray(active_state.ffg_voter_bitmask)
+    ffg_voter_bitfield = bytearray(active_state.ffg_voter_bitfield)
     # Balance changes, and total vote counts for FFG
     deltas1, total_vote_count, total_vote_deposits, justify, finalize = \
-        process_ffg_deposits(crystallized_state, ffg_voter_bitmask)
+        process_ffg_deposits(crystallized_state, ffg_voter_bitfield)
     # Balance changes, and total vote counts for crosslinks
     deltas2, new_crosslink_records = process_crosslinks(
         crystallized_state,
@@ -321,7 +321,7 @@ def _initialize_new_epoch(crystallized_state, active_state):
     active_state = ActiveState(
         height=active_state.height,
         randao=active_state.randao,
-        ffg_voter_bitmask=bytearray((len(crystallized_state.active_validators) + 7) // 8),
+        ffg_voter_bitfield=bytearray((len(crystallized_state.active_validators) + 7) // 8),
         balance_deltas=[],
         partial_crosslinks=[],
         total_skip_count=active_state.total_skip_count
@@ -360,10 +360,10 @@ def _compute_new_active_state(crystallized_state,
         print('Verified main sig')
 
     # Update crosslink records
-    new_crosslink_records, new_ffg_bitmask, total_new_voters = update_ffg_and_crosslink_progress(
+    new_crosslink_records, new_ffg_bitfield, total_new_voters = update_ffg_and_crosslink_progress(
         crystallized_state,
         active_state.partial_crosslinks,
-        active_state.ffg_voter_bitmask,
+        active_state.ffg_voter_bitfield,
         block.shard_aggregate_votes
     )
     balance_deltas.append((main_signer << 24) + total_new_voters)
@@ -378,7 +378,7 @@ def _compute_new_active_state(crystallized_state,
         randao=updated_randao,
         total_skip_count=active_state.total_skip_count + block.skip_count,
         partial_crosslinks=new_crosslink_records,
-        ffg_voter_bitmask=new_ffg_bitmask,
+        ffg_voter_bitfield=new_ffg_bitfield,
         balance_deltas=active_state.balance_deltas + balance_deltas
     )
 

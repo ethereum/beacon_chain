@@ -6,8 +6,8 @@ class PartialCrosslinkRecord():
         'shard_id': 'int16',
         # Hash of the block
         'shard_block_hash': 'hash32',
-        # Which of the eligible voters are voting for it (as a bitmask)
-        'voter_bitmask': 'bytes'
+        # Which of the eligible voters are voting for it (as a bitfield)
+        'voter_bitfield': 'bytes'
     }
     defaults = {}
 

@@ -38,7 +38,7 @@ def test_active_state_serialization():
             PartialCrosslinkRecord(
                 shard_id=42,
                 shard_block_hash=b'\x55'*32,
-                voter_bitmask=b'31337dawg'
+                voter_bitfield=b'31337dawg'
             )
         ],
         height=555,

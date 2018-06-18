@@ -8,8 +8,8 @@ class ActiveState():
         'height': 'int64',
         # Global RANDAO beacon state
         'randao': 'hash32',
-        # Which validators have made FFG votes this epoch (as a bitmask)
-        'ffg_voter_bitmask': 'bytes',
+        # Which validators have made FFG votes this epoch (as a bitfield)
+        'ffg_voter_bitfield': 'bytes',
         # Deltas to validator balances (to be processed at end of epoch)
         'balance_deltas': ['int48'],
         # Storing data about crosslinks-in-progress attempted in this epoch
@@ -20,7 +20,7 @@ class ActiveState():
     defaults = {
         'height': 0,
         'randao': b'\x00'*32,
-        'ffg_voter_bitmask': b'',
+        'ffg_voter_bitfield': b'',
         'balance_deltas': [],
         'partial_crosslinks': [],
         'total_skip_count': 0
