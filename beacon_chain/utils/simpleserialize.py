@@ -15,9 +15,12 @@ def serialize(val, typ=None):
         sub = b''.join([serialize(x, typ[0]) for x in val])
         return len(sub).to_bytes(4, 'big') + sub
     elif isinstance(typ, type):
-        sub = b''.join([serialize(getattr(val, k), typ.fields[k]) for k in sorted(typ.fields.keys())])
+        sub = b''.join(
+            [serialize(getattr(val, k), typ.fields[k]) for k in sorted(typ.fields.keys())]
+        )
         return len(sub).to_bytes(4, 'big') + sub
     raise Exception("Cannot serialize", val, typ)
+
 
 def _deserialize(data, start, typ):
     if typ in ('hash32', 'address'):
@@ -52,8 +55,10 @@ def _deserialize(data, start, typ):
         return typ(**values), pos
     raise Exception("Cannot deserialize", typ)
 
+
 def deserialize(data, typ):
     return _deserialize(data, 0, typ)[0]
+
 
 def eq(x, y):
     if hasattr(x, 'fields') and hasattr(y, 'fields'):
@@ -65,6 +70,7 @@ def eq(x, y):
     else:
         return x == y
 
+
 def deepcopy(x):
     if hasattr(x, 'fields'):
         vals = {}
@@ -75,6 +81,7 @@ def deepcopy(x):
         return [deepcopy(y) for y in x]
     else:
         return x
+
 
 def to_dict(x):
     if hasattr(x, 'fields'):
