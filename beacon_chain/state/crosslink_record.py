@@ -6,7 +6,10 @@ class CrosslinkRecord():
         # The block hash
         'hash': 'hash32'
     }
-    defaults = {'epoch': 0, 'hash': b'\x00'*32}
+    defaults = {
+        'epoch': 0,
+        'hash': b'\x00'*32
+    }
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():

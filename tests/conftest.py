@@ -76,8 +76,8 @@ def genesis_crystallized_state(pubkeys,
     return CrystallizedState(
         active_validators=[ValidatorRecord(
             pubkey=pub,
-            return_shard=0,
-            return_address=blake(pub.to_bytes(32, 'big'))[-20:],
+            withdrawal_shard=0,
+            withdrawal_address=blake(pub.to_bytes(32, 'big'))[-20:],
             randao_commitment=b'\x55'*32,
             balance=DEFAULT_BALANCE,
             switch_dynasty=DEFAULT_SWITCH_DYNASTY

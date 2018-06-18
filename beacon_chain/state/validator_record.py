@@ -4,9 +4,9 @@ class ValidatorRecord():
         # The validator's public key
         'pubkey': 'int256',
         # What shard the validator's balance will be sent to after withdrawal
-        'return_shard': 'int16',
+        'withdrawal_shard': 'int16',
         # And what address
-        'return_address': 'address',
+        'withdrawal_address': 'address',
         # The validator's current RANDAO beacon commitment
         'randao_commitment': 'hash32',
         # Current balance
