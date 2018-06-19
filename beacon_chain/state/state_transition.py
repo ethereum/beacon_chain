@@ -195,7 +195,8 @@ def process_crosslinks(crystallized_state, crosslinks, config=DEFAULT_CONFIG):
     return deltas, new_crosslink_records
 
 
-def process_balance_deltas(crystallized_state, balance_deltas, max_validators=MAX_VALIDATORS):
+def process_balance_deltas(crystallized_state, balance_deltas, config=DEFAULT_CONFIG):
+    max_validators = config['max_validators']
     deltas = [0] * len(crystallized_state.active_validators)
     for i in balance_deltas:
         if i % max_validators < (max_validators / 2):
@@ -314,7 +315,7 @@ def _initialize_new_epoch(crystallized_state, active_state, config=DEFAULT_CONFI
     deltas3 = process_balance_deltas(
         crystallized_state,
         active_state.balance_deltas,
-        config['max_validators']
+        config
     )
     for i, v in enumerate(new_validator_records):
         v.balance += deltas1[i] + deltas2[i] + deltas3[i]
