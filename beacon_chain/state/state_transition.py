@@ -207,6 +207,20 @@ def process_balance_deltas(crystallized_state, balance_deltas, config=DEFAULT_CO
     return deltas
 
 
+def process_recent_attesters(crystallized_state, recent_attesters, config=DEFAULT_CONFIG):
+    deltas = [0] * len(crystallized_state.active_validators)
+    for index in recent_attesters:
+        deltas[index] += 1
+    return deltas
+
+
+def process_recent_proposers(crystallized_state, recent_proposers):
+    deltas = [0] * len(crystallized_state.active_validators)
+    for proposer in recent_proposers:
+        deltas[proposer.index] += proposer.balance_delta
+    return deltas
+
+
 def get_incremented_validator_sets(crystallized_state,
                                    new_active_validators,
                                    config=DEFAULT_CONFIG):
@@ -311,15 +325,20 @@ def _initialize_new_epoch(crystallized_state, active_state, config=DEFAULT_CONFI
         crystallized_state,
         active_state.partial_crosslinks
     )
-    # Process other balance deltas
-    deltas3 = process_balance_deltas(
+    # process recent attesters balance deltas
+    deltas3 = process_recent_attesters(
         crystallized_state,
-        active_state.balance_deltas,
-        config
+        active_state.recent_attesters
     )
+    # process recent proposers balance deltas
+    deltas4 = process_recent_proposers(
+        crystallized_state,
+        active_state.recent_proposers
+    )
+
     for i, v in enumerate(new_validator_records):
-        v.balance += deltas1[i] + deltas2[i] + deltas3[i]
-    total_deposits = crystallized_state.total_deposits + sum(deltas1 + deltas2 + deltas3)
+        v.balance += deltas1[i] + deltas2[i] + deltas3[i] + deltas4[i]
+    total_deposits = crystallized_state.total_deposits + sum(deltas1 + deltas2 + deltas3 + deltas4)
     print('New total deposits: %d' % total_deposits)
 
     if justify:
