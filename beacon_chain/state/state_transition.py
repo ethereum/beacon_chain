@@ -195,18 +195,6 @@ def process_crosslinks(crystallized_state, crosslinks, config=DEFAULT_CONFIG):
     return deltas, new_crosslink_records
 
 
-def process_balance_deltas(crystallized_state, balance_deltas, config=DEFAULT_CONFIG):
-    max_validators = config['max_validators']
-    deltas = [0] * len(crystallized_state.active_validators)
-    for i in balance_deltas:
-        if i % max_validators < (max_validators / 2):
-            deltas[i >> 24] += i & (max_validators - 1)
-        else:
-            deltas[i >> 24] += (i & (max_validators - 1)) - max_validators
-    print('Total deposit change from deltas: %d' % sum(deltas))
-    return deltas
-
-
 def process_recent_attesters(crystallized_state, recent_attesters, config=DEFAULT_CONFIG):
     deltas = [0] * len(crystallized_state.active_validators)
     for index in recent_attesters:
