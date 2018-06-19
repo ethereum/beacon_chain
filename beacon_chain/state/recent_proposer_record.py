@@ -9,6 +9,7 @@ class RecentProposerRecord():
         'balance_delta': 'int24'
     }
     defaults = {
+        'randao_commitment': b'\x00'*32,
         'balance_delta': 0
     }
 

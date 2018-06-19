@@ -1,12 +1,19 @@
+import pytest
+
 from beacon_chain.state.recent_proposer_record import (
     RecentProposerRecord
 )
 
 
-def test_default_balance_delta():
-    recent_proposer_record = RecentProposerRecord(
-        index=10,
-        randao_commitment=b'\x35'*32
-    )
+@pytest.mark.parametrize(
+    'param,default_value',
+    [
+        ('randao_commitment', b'\x00'*32),
+        ('balance_delta', 0),
+    ]
+)
+def test_defaults(param, default_value, sample_recent_proposer_record_params):
+    del sample_recent_proposer_record_params[param]
+    proposer = RecentProposerRecord(**sample_recent_proposer_record_params)
 
-    assert recent_proposer_record.balance_delta == 0
+    assert getattr(proposer, param) == default_value

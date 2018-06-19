@@ -1,4 +1,5 @@
 import time
+import pytest
 
 from beacon_chain.state.state_transition import (
     EPOCH_LENGTH,
@@ -7,6 +8,12 @@ from beacon_chain.state.state_transition import (
 from beacon_chain.utils.simpleserialize import serialize
 
 
+@pytest.mark.parametrize(
+    'num_validators',
+    [
+        (1000)
+    ]
+)
 def test_state_transition_integration(genesis_crystallized_state,
                                       genesis_active_state,
                                       genesis_block,

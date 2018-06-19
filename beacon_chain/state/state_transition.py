@@ -17,6 +17,9 @@ from .crystallized_state import (
 from .partial_crosslink_record import (
     PartialCrosslinkRecord,
 )
+from .recent_proposer_record import (
+    RecentProposerRecord,
+)
 
 
 ATTESTER_COUNT = 32
@@ -27,13 +30,24 @@ DEFAULT_SWITCH_DYNASTY = 9999999999999999999
 MAX_VALIDATORS = 2**24
 
 
+DEFAULT_CONFIG = {
+    'attester_count': ATTESTER_COUNT,
+    'epoch_length': EPOCH_LENGTH,
+    'shard_count': SHARD_COUNT,
+    'default_balance': DEFAULT_BALANCE,
+    'max_validators': MAX_VALIDATORS
+}
+
+
 def state_hash(crystallized_state, active_state):
     return blake(serialize(crystallized_state)) + blake(serialize(active_state))
 
 
-def get_shuffling(seed, validator_count, sample=None):
-    assert validator_count <= MAX_VALIDATORS
-    rand_max = MAX_VALIDATORS - MAX_VALIDATORS % validator_count
+def get_shuffling(seed, validator_count, sample=None, config=DEFAULT_CONFIG):
+    max_validators = config['max_validators']
+    assert validator_count <= max_validators
+
+    rand_max = max_validators - max_validators % validator_count
     o = list(range(validator_count))
     source = seed
     i = 0
@@ -60,20 +74,30 @@ def get_crosslink_aggvote_msg(shard_id, shard_block_hash, crystallized_state):
         crystallized_state.last_justified_epoch.to_bytes(8, 'big')
 
 
-def get_attesters_and_signer(crystallized_state, active_state, skip_count):
-    attestation_count = min(len(crystallized_state.active_validators), ATTESTER_COUNT)
+def get_attesters_and_signer(crystallized_state,
+                             active_state,
+                             skip_count,
+                             config=DEFAULT_CONFIG):
+    attester_count = config['attester_count']
+    attestation_count = min(len(crystallized_state.active_validators), attester_count)
+
     indices = get_shuffling(
         active_state.randao,
         len(crystallized_state.active_validators),
-        attestation_count + skip_count + 1
+        attestation_count + skip_count + 1,
+        config
     )
     return indices[:attestation_count], indices[-1]
 
 
-def get_shard_attesters(crystallized_state, shard_id):
+def get_shard_attesters(crystallized_state,
+                        shard_id,
+                        config=DEFAULT_CONFIG):
+    shard_count = config['shard_count']
+
     vc = len(crystallized_state.active_validators)
-    start_index = (vc * shard_id) // SHARD_COUNT
-    end_index = (vc * (shard_id + 1)) // SHARD_COUNT
+    start_index = (vc * shard_id) // shard_count
+    end_index = (vc * (shard_id + 1)) // shard_count
 
     return crystallized_state.current_shuffling[start_index:end_index]
 
@@ -119,7 +143,7 @@ def process_ffg_deposits(crystallized_state, ffg_voter_bitfield):
 
 
 # Process rewards from crosslinks
-def process_crosslinks(crystallized_state, crosslinks):
+def process_crosslinks(crystallized_state, crosslinks, config=DEFAULT_CONFIG):
     # Find the most popular crosslink in each shard
     main_crosslink = {}
     for c in crosslinks:
@@ -134,8 +158,8 @@ def process_crosslinks(crystallized_state, crosslinks):
     new_crosslink_records = [x for x in crystallized_state.crosslink_records]
     deltas = [0] * len(crystallized_state.active_validators)
     # Process shard by shard...
-    for shard in range(SHARD_COUNT):
-        indices = get_shard_attesters(crystallized_state, shard)
+    for shard in range(config['shard_count']):
+        indices = get_shard_attesters(crystallized_state, shard, config)
         # Get info about the dominant crosslink for this shard
         h, votes, mask = main_crosslink.get(shard, (b'', 0, bytearray((len(indices)+7)//8)))
         # Calculate rewards for participants and penalties for non-participants
@@ -171,23 +195,25 @@ def process_crosslinks(crystallized_state, crosslinks):
     return deltas, new_crosslink_records
 
 
-def process_balance_deltas(crystallized_state, balance_deltas):
+def process_balance_deltas(crystallized_state, balance_deltas, max_validators=MAX_VALIDATORS):
     deltas = [0] * len(crystallized_state.active_validators)
     for i in balance_deltas:
-        if i % MAX_VALIDATORS < (MAX_VALIDATORS / 2):
-            deltas[i >> 24] += i & (MAX_VALIDATORS - 1)
+        if i % max_validators < (max_validators / 2):
+            deltas[i >> 24] += i & (max_validators - 1)
         else:
-            deltas[i >> 24] += (i & (MAX_VALIDATORS - 1)) - MAX_VALIDATORS
+            deltas[i >> 24] += (i & (max_validators - 1)) - max_validators
     print('Total deposit change from deltas: %d' % sum(deltas))
     return deltas
 
 
-def get_incremented_validator_sets(crystallized_state, new_active_validators):
+def get_incremented_validator_sets(crystallized_state,
+                                   new_active_validators,
+                                   config=DEFAULT_CONFIG):
     new_active_validators = [v for v in new_active_validators]
     new_exited_validators = [v for v in crystallized_state.exited_validators]
     i = 0
     while i < len(new_active_validators):
-        if new_active_validators[i].balance <= DEFAULT_BALANCE // 2:
+        if new_active_validators[i].balance <= config['default_balance'] // 2:
             new_exited_validators.append(new_active_validators.pop(i))
         elif new_active_validators[i].switch_dynasty == crystallized_state.dynasty + 1:
             new_exited_validators.append(new_active_validators.pop(i))
@@ -225,7 +251,11 @@ def process_attestations(validator_set,
     return balance_deltas
 
 
-def update_ffg_and_crosslink_progress(crystallized_state, crosslinks, ffg_voter_bitfield, votes):
+def update_ffg_and_crosslink_progress(crystallized_state,
+                                      crosslinks,
+                                      ffg_voter_bitfield,
+                                      votes,
+                                      config=DEFAULT_CONFIG):
     # Verify the attestations of crosslink hashes
     crosslink_votes = {
         vote.shard_block_hash + vote.shard_id.to_bytes(2, 'big'): vote.voter_bitfield
@@ -239,7 +269,7 @@ def update_ffg_and_crosslink_progress(crystallized_state, crosslinks, ffg_voter_
             vote.shard_block_hash,
             crystallized_state
         )
-        indices = get_shard_attesters(crystallized_state, vote.shard_id)
+        indices = get_shard_attesters(crystallized_state, vote.shard_id, config)
         votekey = vote.shard_block_hash + vote.shard_id.to_bytes(2, 'big')
         if votekey not in crosslink_votes:
             crosslink_votes[votekey] = bytearray((len(indices) + 7) // 8)
@@ -266,7 +296,7 @@ def update_ffg_and_crosslink_progress(crystallized_state, crosslinks, ffg_voter_
     return new_crosslinks, new_ffg_bitfield, total_voters
 
 
-def _initialize_new_epoch(crystallized_state, active_state):
+def _initialize_new_epoch(crystallized_state, active_state, config=DEFAULT_CONFIG):
     print('Processing epoch transition')
     # Process rewards from FFG/crosslink votes
     new_validator_records = deepcopy(crystallized_state.active_validators)
@@ -281,7 +311,11 @@ def _initialize_new_epoch(crystallized_state, active_state):
         active_state.partial_crosslinks
     )
     # Process other balance deltas
-    deltas3 = process_balance_deltas(crystallized_state, active_state.balance_deltas)
+    deltas3 = process_balance_deltas(
+        crystallized_state,
+        active_state.balance_deltas,
+        config['max_validators']
+    )
     for i, v in enumerate(new_validator_records):
         v.balance += deltas1[i] + deltas2[i] + deltas3[i]
     total_deposits = crystallized_state.total_deposits + sum(deltas1 + deltas2 + deltas3)
@@ -308,7 +342,11 @@ def _initialize_new_epoch(crystallized_state, active_state):
         queued_validators=new_queued_validators,
         active_validators=new_active_validators,
         exited_validators=new_exited_validators,
-        current_shuffling=get_shuffling(active_state.randao, len(new_active_validators)),
+        current_shuffling=get_shuffling(
+            active_state.randao,
+            len(new_active_validators),
+            config=config
+        ),
         last_justified_epoch=last_justified_epoch,
         last_finalized_epoch=last_finalized_epoch,
         dynasty=dynasty,
@@ -324,7 +362,8 @@ def _initialize_new_epoch(crystallized_state, active_state):
         ffg_voter_bitfield=bytearray((len(crystallized_state.active_validators) + 7) // 8),
         balance_deltas=[],
         partial_crosslinks=[],
-        total_skip_count=active_state.total_skip_count
+        total_skip_count=active_state.total_skip_count,
+        recent_proposers=[]
     )
 
     return crystallized_state, active_state
@@ -334,12 +373,14 @@ def _compute_new_active_state(crystallized_state,
                               active_state,
                               parent_block,
                               block,
-                              verify_sig=True):
+                              verify_sig=True,
+                              config=DEFAULT_CONFIG):
     # Determine who the attesters and the main signer are
     attestation_indices, main_signer = get_attesters_and_signer(
         crystallized_state,
         active_state,
-        block.skip_count
+        block.skip_count,
+        config
     )
 
     # Verify attestations
@@ -359,12 +400,18 @@ def _compute_new_active_state(crystallized_state,
         assert block.verify(crystallized_state.active_validators[main_signer].pubkey)
         print('Verified main sig')
 
+    proposer = RecentProposerRecord(
+        index=main_signer,
+        balance_delta=len(balance_deltas)
+    )
+
     # Update crosslink records
     new_crosslink_records, new_ffg_bitfield, total_new_voters = update_ffg_and_crosslink_progress(
         crystallized_state,
         active_state.partial_crosslinks,
         active_state.ffg_voter_bitfield,
-        block.shard_aggregate_votes
+        block.shard_aggregate_votes,
+        config
     )
     balance_deltas.append((main_signer << 24) + total_new_voters)
 
@@ -379,23 +426,33 @@ def _compute_new_active_state(crystallized_state,
         total_skip_count=active_state.total_skip_count + block.skip_count,
         partial_crosslinks=new_crosslink_records,
         ffg_voter_bitfield=new_ffg_bitfield,
-        balance_deltas=active_state.balance_deltas + balance_deltas
+        balance_deltas=active_state.balance_deltas + balance_deltas,
+        recent_proposers=active_state.recent_proposers + [proposer]
     )
 
 
-def compute_state_transition(parent_state, parent_block, block, verify_sig=True):
+def compute_state_transition(parent_state,
+                             parent_block,
+                             block,
+                             verify_sig=True,
+                             config=DEFAULT_CONFIG):
     crystallized_state, active_state = parent_state
 
     # Initialize a new epoch if needed
-    if active_state.height % EPOCH_LENGTH == 0:
-        crystallized_state, active_state = _initialize_new_epoch(crystallized_state, active_state)
+    if active_state.height % config['epoch_length'] == 0:
+        crystallized_state, active_state = _initialize_new_epoch(
+            crystallized_state,
+            active_state,
+            config
+        )
 
     active_state = _compute_new_active_state(
         crystallized_state,
         active_state,
         parent_block,
         block,
-        verify_sig
+        verify_sig,
+        config
     )
 
     return crystallized_state, active_state
