@@ -211,8 +211,13 @@ def make_unfinished_block(keymap, config):
         # Randomly pick indices to include
         bitfield = [1 if random.random() < attester_share else 0 for i in indices]
         # Attestations
-        sigs = [bls.sign(parent_attestation, keymap[crystallized_state.active_validators[indices[i]].pubkey])
-                for i in range(len(indices)) if bitfield[i]]
+        sigs = [
+            bls.sign(
+                parent_attestation,
+                keymap[crystallized_state.active_validators[indices[i]].pubkey]
+            )
+            for i in range(len(indices)) if bitfield[i]
+        ]
         attestation_aggregate_sig = bls.aggregate_sigs(sigs)
         print('Aggregated sig')
 
@@ -294,6 +299,7 @@ def mock_make_child(keymap, make_unfinished_block, config):
         )
         print('Calculated state transition')
 
+        print(new_active_state)
         if crystallized_state == new_crystallized_state:
             block.state_hash = blake(parent.state_hash[:32] + blake(serialize(new_active_state)))
         else:

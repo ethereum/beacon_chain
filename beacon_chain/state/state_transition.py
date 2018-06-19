@@ -23,7 +23,7 @@ from .recent_proposer_record import (
 
 
 ATTESTER_COUNT = 32
-EPOCH_LENGTH = 20
+EPOCH_LENGTH = 5
 SHARD_COUNT = 20
 DEFAULT_BALANCE = 20000
 DEFAULT_SWITCH_DYNASTY = 9999999999999999999
@@ -240,16 +240,16 @@ def process_attestations(validator_set,
                          aggregate_sig):
     # Verify the attestations of the parent
     pubs = []
-    balance_deltas = []
+    attesters = []
     assert len(attestation_bitfield) == (len(attestation_indices) + 7) // 8
     for i, index in enumerate(attestation_indices):
         if attestation_bitfield[i//8] & (128 >> (i % 8)):
             pubs.append(validator_set[index].pubkey)
-            balance_deltas.append((index << 24) + 1)
-    assert len(balance_deltas) <= 128
+            attesters.append(index)
+    assert len(attesters) <= 128
     assert bls.verify(msg, bls.aggregate_pubs(pubs), aggregate_sig)
     print('Verified aggregate sig')
-    return balance_deltas
+    return attesters
 
 
 def update_ffg_and_crosslink_progress(crystallized_state,
@@ -385,7 +385,7 @@ def _compute_new_active_state(crystallized_state,
     )
 
     # Verify attestations
-    balance_deltas = process_attestations(
+    attesters = process_attestations(
         crystallized_state.active_validators,
         attestation_indices,
         block.attestation_bitfield,
@@ -393,18 +393,10 @@ def _compute_new_active_state(crystallized_state,
         block.attestation_aggregate_sig
     )
 
-    # Reward main signer
-    balance_deltas.append((main_signer << 24) + len(balance_deltas))
-
     # Verify main signature
     if verify_sig:
         assert block.verify(crystallized_state.active_validators[main_signer].pubkey)
         print('Verified main sig')
-
-    proposer = RecentProposerRecord(
-        index=main_signer,
-        balance_delta=len(balance_deltas)
-    )
 
     # Update crosslink records
     new_crosslink_records, new_ffg_bitfield, total_new_voters = update_ffg_and_crosslink_progress(
@@ -414,7 +406,12 @@ def _compute_new_active_state(crystallized_state,
         block.shard_aggregate_votes,
         config
     )
-    balance_deltas.append((main_signer << 24) + total_new_voters)
+
+    # track the reward for the block proposer
+    proposer = RecentProposerRecord(
+        index=main_signer,
+        balance_delta=len(attesters) + total_new_voters
+    )
 
     # TODO: verify randao reveal from validator's hash preimage
     updated_randao = (
@@ -427,7 +424,7 @@ def _compute_new_active_state(crystallized_state,
         total_skip_count=active_state.total_skip_count + block.skip_count,
         partial_crosslinks=new_crosslink_records,
         ffg_voter_bitfield=new_ffg_bitfield,
-        balance_deltas=active_state.balance_deltas + balance_deltas,
+        recent_attesters=active_state.recent_attesters + attesters,
         recent_proposers=active_state.recent_proposers + [proposer]
     )
 
