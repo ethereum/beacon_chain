@@ -5,7 +5,7 @@ Deposit: event({
     randao_commitment: bytes32})
 
 
-validators: public(bool[address])
+used_pubkey: public(bool[bytes32])
 
 
 @public
@@ -16,9 +16,9 @@ def deposit(
         withdrawal_addr: address,
         randao_commitment: bytes32):
     assert msg.value == as_wei_value(32, "ether")
-    assert not self.validators[pubkey]
+    assert not self.used_pubkey[pubkey]
 
-    self.validators[pubkey] = True
+    self.used_pubkey[pubkey] = True
 
     log.Deposit(pubkey, withdrawal_shard_id,
                 withdrawal_addr, randao_commitment)
