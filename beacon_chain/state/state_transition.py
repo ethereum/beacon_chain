@@ -266,6 +266,7 @@ def update_ffg_and_crosslink_progress(crystallized_state,
     }
     new_ffg_bitfield = bytearray(ffg_voter_bitfield)
     total_voters = 0
+
     for vote in votes:
         attestation = get_crosslink_aggvote_msg(
             vote.shard_id,
@@ -288,6 +289,7 @@ def update_ffg_and_crosslink_progress(crystallized_state,
         assert bls.verify(attestation, bls.aggregate_pubs(pubs), vote.aggregate_sig)
         crosslink_votes[votekey] = bitfield
         print('Verified aggregate vote')
+
     new_crosslinks = [
         PartialCrosslinkRecord(
             shard_id=int.from_bytes(h[32:], 'big'),
@@ -296,6 +298,7 @@ def update_ffg_and_crosslink_progress(crystallized_state,
         )
         for h in sorted(crosslink_votes.keys())
     ]
+
     return new_crosslinks, new_ffg_bitfield, total_voters
 
 

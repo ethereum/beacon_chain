@@ -5,8 +5,7 @@ def test_height_updates(genesis_crystallized_state,
                         genesis_active_state,
                         genesis_block,
                         mock_make_child,
-                        epoch_length,
-                        config):
+                        epoch_length):
     crystallized_state = genesis_crystallized_state
     active_state = genesis_active_state
     parent_block = genesis_block
@@ -32,8 +31,7 @@ def test_recent_proposer_is_added(genesis_crystallized_state,
                                   genesis_active_state,
                                   genesis_block,
                                   mock_make_child,
-                                  epoch_length,
-                                  config):
+                                  epoch_length):
     crystallized_state = genesis_crystallized_state
     active_state = genesis_active_state
     parent_block = genesis_block
@@ -58,9 +56,39 @@ def test_recent_proposer_is_added(genesis_crystallized_state,
         parent_block = child_block
 
 
-@pytest.mark.skip(reason="not yet implemented")
-def test_proposer_reward():
-    pass
+# Test assumes that no FFG votes are cast so proposer reward is just form attestations
+# `mock_make_child` currently does not cast any votes
+# when FFG voting is added to function, this test will require FFG votes to be set to zero.
+def test_proposer_balance_delta(genesis_crystallized_state,
+                                genesis_active_state,
+                                genesis_block,
+                                mock_make_child,
+                                epoch_length,
+                                attester_count):
+    crystallized_state = genesis_crystallized_state
+    active_state = genesis_active_state
+    parent_block = genesis_block
+
+    child_block, crystallized_state, active_state = mock_make_child(
+        (crystallized_state, active_state),
+        parent_block,
+        0,
+        1.0  # full attestation
+    )
+
+    assert len(active_state.recent_proposers) == 1
+    assert active_state.recent_proposers[0].balance_delta == attester_count
+
+    fraction_attested = 0.6
+    child_block, crystallized_state, active_state = mock_make_child(
+        (crystallized_state, active_state),
+        parent_block,
+        0,
+        fraction_attested  # fractional attestation
+    )
+
+    assert len(active_state.recent_proposers) == 2
+    assert active_state.recent_proposers[-1].balance_delta <= attester_count * fraction_attested
 
 
 def test_recent_attesters_added(genesis_crystallized_state,
@@ -68,8 +96,7 @@ def test_recent_attesters_added(genesis_crystallized_state,
                                 genesis_block,
                                 mock_make_child,
                                 epoch_length,
-                                attester_count,
-                                config):
+                                attester_count):
     crystallized_state = genesis_crystallized_state
     active_state = genesis_active_state
     parent_block = genesis_block
