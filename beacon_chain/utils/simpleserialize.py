@@ -1,3 +1,6 @@
+import collections
+
+
 def serialize(val, typ=None):
     if typ is None and hasattr(val, 'fields'):
         typ = type(val)
@@ -62,11 +65,15 @@ def deserialize(data, typ):
 
 def eq(x, y):
     if hasattr(x, 'fields') and hasattr(y, 'fields'):
+        if x.fields != y.fields:
+            return False
         for f in x.fields:
             if not eq(getattr(x, f), getattr(y, f)):
                 print('Unequal:', x, y, f, getattr(x, f), getattr(y, f))
                 return False
-            return True
+        return True
+    elif isinstance(x, collections.Iterable) and isinstance(y, collections.Iterable):
+        return all(eq(xi, yi) for xi, yi in zip(x, y))
     else:
         return x == y
 
