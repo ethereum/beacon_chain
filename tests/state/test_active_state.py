@@ -18,7 +18,6 @@ from beacon_chain.utils.simpleserialize import (
         ('height', 0),
         ('randao', b'\x00'*32),
         ('ffg_voter_bitfield', b''),
-        ('balance_deltas', []),
         ('recent_attesters', []),
         ('partial_crosslinks', []),
         ('total_skip_count', 0),
