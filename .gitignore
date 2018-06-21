@@ -2,4 +2,6 @@
 venv
 .DS_Store
 .pytest_cache
-tmp.txt
+test-reports/
+
+notes.txt
