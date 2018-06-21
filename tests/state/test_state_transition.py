@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_height_updates(genesis_crystallized_state,
@@ -88,7 +87,19 @@ def test_proposer_balance_delta(genesis_crystallized_state,
     )
 
     assert len(active_state.recent_proposers) == 2
-    assert active_state.recent_proposers[-1].balance_delta <= attester_count * fraction_attested
+
+    # count number of actual attesters
+    bitfield = child_block.attestation_bitfield
+    num_attesters = 0
+    for i in range(len(bitfield)):
+        num_attesters += bin(bitfield[i]).count("1")
+
+    # ensure number of actual attesters is in the expected range
+    acceptable_range = 0.3
+    assert num_attesters > attester_count * fraction_attested * (1 - acceptable_range)
+    assert num_attesters < attester_count * fraction_attested * (1 + acceptable_range)
+
+    assert active_state.recent_proposers[-1].balance_delta == num_attesters
 
 
 def test_recent_attesters_added(genesis_crystallized_state,

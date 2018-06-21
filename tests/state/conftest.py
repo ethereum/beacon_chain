@@ -1,6 +1,15 @@
 import pytest
 import random
 
+from beacon_chain.state.config import (
+    ATTESTER_COUNT,
+    DEFAULT_BALANCE,
+    DEFAULT_SWITCH_DYNASTY,
+    EPOCH_LENGTH,
+    MAX_VALIDATORS,
+    SHARD_COUNT,
+    generate_config
+)
 from beacon_chain.state.active_state import (
     ActiveState,
 )
@@ -20,12 +29,6 @@ from beacon_chain.state.validator_record import (
     ValidatorRecord,
 )
 from beacon_chain.state.state_transition import (
-    ATTESTER_COUNT,
-    DEFAULT_BALANCE,
-    DEFAULT_SWITCH_DYNASTY,
-    EPOCH_LENGTH,
-    MAX_VALIDATORS,
-    SHARD_COUNT,
     compute_state_transition,
     get_attesters_and_signer,
     get_crosslink_aggvote_msg,
@@ -112,13 +115,13 @@ def config(attester_count,
            shard_count,
            default_balance,
            max_validators):
-    return {
-        'attester_count': attester_count,
-        'epoch_length': epoch_length,
-        'shard_count': shard_count,
-        'defaul_balance': default_balance,
-        'max_validators': max_validators
-    }
+    return generate_config(
+        attester_count=attester_count,
+        epoch_length=epoch_length,
+        shard_count=shard_count,
+        default_balance=default_balance,
+        max_validators=max_validators
+    )
 
 
 @pytest.fixture
@@ -225,6 +228,7 @@ def make_unfinished_block(keymap, config):
         for i, b in enumerate(bitfield):
             attestation_bitfield[i//8] ^= (128 >> (i % 8)) * b
         print('Aggregate bitfield:', bin(int.from_bytes(attestation_bitfield, 'big')))
+        print(attestation_bitfield)
 
         # Randomly pick indices to include for crosslinks
         shard_aggregate_votes = []

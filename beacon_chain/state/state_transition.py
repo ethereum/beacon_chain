@@ -5,6 +5,9 @@ from beacon_chain.utils.simpleserialize import (
     serialize,
 )
 
+from .config import (
+    DEFAULT_CONFIG,
+)
 from .active_state import (
     ActiveState,
 )
@@ -20,23 +23,6 @@ from .partial_crosslink_record import (
 from .recent_proposer_record import (
     RecentProposerRecord,
 )
-
-
-ATTESTER_COUNT = 32
-EPOCH_LENGTH = 5
-SHARD_COUNT = 20
-DEFAULT_BALANCE = 20000
-DEFAULT_SWITCH_DYNASTY = 9999999999999999999
-MAX_VALIDATORS = 2**24
-
-
-DEFAULT_CONFIG = {
-    'attester_count': ATTESTER_COUNT,
-    'epoch_length': EPOCH_LENGTH,
-    'shard_count': SHARD_COUNT,
-    'default_balance': DEFAULT_BALANCE,
-    'max_validators': MAX_VALIDATORS
-}
 
 
 def state_hash(crystallized_state, active_state):
