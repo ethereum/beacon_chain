@@ -3,6 +3,7 @@ import random
 
 from beacon_chain.state.config import (
     ATTESTER_COUNT,
+    ATTESTER_REWARD,
     DEFAULT_BALANCE,
     DEFAULT_SWITCH_DYNASTY,
     EPOCH_LENGTH,
@@ -90,6 +91,11 @@ def attester_count():
 
 
 @pytest.fixture
+def attester_reward():
+    return ATTESTER_REWARD
+
+
+@pytest.fixture
 def epoch_length():
     return EPOCH_LENGTH
 
@@ -111,12 +117,14 @@ def max_validators():
 
 @pytest.fixture
 def config(attester_count,
+           attester_reward,
            epoch_length,
            shard_count,
            default_balance,
            max_validators):
     return generate_config(
         attester_count=attester_count,
+        attester_reward=attester_reward,
         epoch_length=epoch_length,
         shard_count=shard_count,
         default_balance=default_balance,
@@ -228,7 +236,6 @@ def make_unfinished_block(keymap, config):
         for i, b in enumerate(bitfield):
             attestation_bitfield[i//8] ^= (128 >> (i % 8)) * b
         print('Aggregate bitfield:', bin(int.from_bytes(attestation_bitfield, 'big')))
-        print(attestation_bitfield)
 
         # Randomly pick indices to include for crosslinks
         shard_aggregate_votes = []
@@ -303,7 +310,6 @@ def mock_make_child(keymap, make_unfinished_block, config):
         )
         print('Calculated state transition')
 
-        print(new_active_state)
         if crystallized_state == new_crystallized_state:
             block.state_hash = blake(parent.state_hash[:32] + blake(serialize(new_active_state)))
         else:

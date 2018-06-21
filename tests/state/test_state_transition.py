@@ -9,7 +9,6 @@ def test_height_updates(genesis_crystallized_state,
     active_state = genesis_active_state
     parent_block = genesis_block
 
-    print("NUM_VALIDATORS: %s" % len(crystallized_state.active_validators))
     assert active_state.height == 1
 
     prev_height = active_state.height
@@ -93,11 +92,6 @@ def test_proposer_balance_delta(genesis_crystallized_state,
     num_attesters = 0
     for i in range(len(bitfield)):
         num_attesters += bin(bitfield[i]).count("1")
-
-    # ensure number of actual attesters is in the expected range
-    acceptable_range = 0.3
-    assert num_attesters > attester_count * fraction_attested * (1 - acceptable_range)
-    assert num_attesters < attester_count * fraction_attested * (1 + acceptable_range)
 
     assert active_state.recent_proposers[-1].balance_delta == num_attesters
 

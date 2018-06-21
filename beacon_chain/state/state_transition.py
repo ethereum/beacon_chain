@@ -184,7 +184,7 @@ def process_crosslinks(crystallized_state, crosslinks, config=DEFAULT_CONFIG):
 def process_recent_attesters(crystallized_state, recent_attesters, config=DEFAULT_CONFIG):
     deltas = [0] * len(crystallized_state.active_validators)
     for index in recent_attesters:
-        deltas[index] += 1
+        deltas[index] += config['attester_reward']
     return deltas
 
 
@@ -295,27 +295,37 @@ def _initialize_new_epoch(crystallized_state, active_state, config=DEFAULT_CONFI
     # Who voted in the last epoch
     ffg_voter_bitfield = bytearray(active_state.ffg_voter_bitfield)
     # Balance changes, and total vote counts for FFG
-    deltas1, total_vote_count, total_vote_deposits, justify, finalize = \
+    deltas_casper, total_vote_count, total_vote_deposits, justify, finalize = \
         process_ffg_deposits(crystallized_state, ffg_voter_bitfield)
     # Balance changes, and total vote counts for crosslinks
-    deltas2, new_crosslink_records = process_crosslinks(
+    deltas_crosslinks, new_crosslink_records = process_crosslinks(
         crystallized_state,
         active_state.partial_crosslinks
     )
     # process recent attesters balance deltas
-    deltas3 = process_recent_attesters(
+    deltas_recent_attesters = process_recent_attesters(
         crystallized_state,
         active_state.recent_attesters
     )
     # process recent proposers balance deltas
-    deltas4 = process_recent_proposers(
+    deltas_recent_proposers = process_recent_proposers(
         crystallized_state,
         active_state.recent_proposers
     )
 
-    for i, v in enumerate(new_validator_records):
-        v.balance += deltas1[i] + deltas2[i] + deltas3[i] + deltas4[i]
-    total_deposits = crystallized_state.total_deposits + sum(deltas1 + deltas2 + deltas3 + deltas4)
+    for i, validator in enumerate(new_validator_records):
+        validator.balance += (
+            deltas_casper[i] +
+            deltas_crosslinks[i] +
+            deltas_recent_attesters[i] +
+            deltas_recent_proposers[i]
+        )
+    total_deposits = crystallized_state.total_deposits + sum(
+        deltas_casper +
+        deltas_crosslinks +
+        deltas_recent_attesters +
+        deltas_recent_proposers
+    )
     print('New total deposits: %d' % total_deposits)
 
     if justify:
