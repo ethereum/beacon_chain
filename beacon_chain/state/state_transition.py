@@ -60,10 +60,10 @@ def get_crosslink_aggvote_msg(shard_id, shard_block_hash, crystallized_state):
         crystallized_state.last_justified_epoch.to_bytes(8, 'big')
 
 
-def get_attesters_and_signer(crystallized_state,
-                             active_state,
-                             skip_count,
-                             config=DEFAULT_CONFIG):
+def get_attesters_and_proposer(crystallized_state,
+                               active_state,
+                               skip_count,
+                               config=DEFAULT_CONFIG):
     attester_count = config['attester_count']
     attestation_count = min(len(crystallized_state.active_validators), attester_count)
 
@@ -383,7 +383,7 @@ def _compute_new_active_state(crystallized_state,
                               verify_sig=True,
                               config=DEFAULT_CONFIG):
     # Determine who the attesters and the main signer are
-    attestation_indices, main_signer = get_attesters_and_signer(
+    attestation_indices, proposer = get_attesters_and_proposer(
         crystallized_state,
         active_state,
         block.skip_count,
@@ -401,7 +401,7 @@ def _compute_new_active_state(crystallized_state,
 
     # Verify main signature
     if verify_sig:
-        assert block.verify(crystallized_state.active_validators[main_signer].pubkey)
+        assert block.verify(crystallized_state.active_validators[proposer].pubkey)
         print('Verified main sig')
 
     # Update crosslink records
@@ -415,7 +415,7 @@ def _compute_new_active_state(crystallized_state,
 
     # track the reward for the block proposer
     proposer = RecentProposerRecord(
-        index=main_signer,
+        index=proposer,
         balance_delta=len(attesters) + total_new_voters
     )
 

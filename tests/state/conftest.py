@@ -31,7 +31,7 @@ from beacon_chain.state.validator_record import (
 )
 from beacon_chain.state.state_transition import (
     compute_state_transition,
-    get_attesters_and_signer,
+    get_attesters_and_proposer,
     get_crosslink_aggvote_msg,
     get_shard_attesters,
     get_shuffling,
@@ -209,7 +209,7 @@ def make_unfinished_block(keymap, config):
                               crosslink_shards=[]):
         crystallized_state, active_state = parent_state
         parent_attestation = serialize(parent)
-        indices, main_signer = get_attesters_and_signer(
+        indices, proposer = get_attesters_and_proposer(
             crystallized_state,
             active_state,
             skips,
@@ -217,7 +217,7 @@ def make_unfinished_block(keymap, config):
         )
 
         print('Selected indices: %r' % indices)
-        print('Selected main signer: %d' % main_signer)
+        print('Selected block proposer: %d' % proposer)
 
         # Randomly pick indices to include
         bitfield = [1 if random.random() < attester_share else 0 for i in indices]
@@ -280,7 +280,7 @@ def make_unfinished_block(keymap, config):
             main_chain_ref=b'\x00'*32,
             state_hash=b'\x00'*64
         )
-        return block, main_signer
+        return block, proposer
     return make_unfinished_block
 
 
@@ -292,7 +292,7 @@ def mock_make_child(keymap, make_unfinished_block, config):
                         attester_share=0.8,
                         crosslink_shards=[]):
         crystallized_state, active_state = parent_state
-        block, main_signer = make_unfinished_block(
+        block, proposer = make_unfinished_block(
             parent_state,
             parent,
             skips,
@@ -315,7 +315,7 @@ def mock_make_child(keymap, make_unfinished_block, config):
         else:
             block.state_hash = blake(blake(serialize(new_crystallized_state)) + blake(serialize(new_active_state)))
         # Main signature
-        block.sign(keymap[crystallized_state.active_validators[main_signer].pubkey])
+        block.sign(keymap[crystallized_state.active_validators[proposer].pubkey])
         print('Signed')
 
         return block, new_crystallized_state, new_active_state
