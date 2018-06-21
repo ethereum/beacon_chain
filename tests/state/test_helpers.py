@@ -1,10 +1,15 @@
-import pytest
+import copy
 
+import pytest
+from cytoolz import (
+    merge,
+)
+
+from beacon_chain.state.config import (
+    DEFAULT_CONFIG,
+)
 from beacon_chain.state.state_transition import (
     get_shuffling,
-    SHARD_COUNT,
-    DEFAULT_BALANCE,
-    DEFAULT_SWITCH_DYNASTY,
 )
 from beacon_chain.state.validator_record import (
     ValidatorRecord,
@@ -13,6 +18,17 @@ from beacon_chain.state.helpers import (
     get_crosslink_shards,
     get_crosslink_notaries,
     get_crosslink_shards_count,
+)
+
+
+# Fixed configuration for this test especially
+REPLACED_PARAMETERS = {
+    'shard_count': 20,
+    'notaries_per_crosslink': 100,
+}
+testing_helpers_config = merge(
+    copy.deepcopy(DEFAULT_CONFIG),
+    REPLACED_PARAMETERS,
 )
 
 
@@ -31,33 +47,57 @@ def create_crystallized_state(
     return crystallized_state
 
 
-def mock_validator_record(pubkey):
+def mock_validator_record(pubkey, testing_helpers_config):
     return ValidatorRecord(
         pubkey=pubkey,
         withdrawal_shard=0,
         withdrawal_address=pubkey.to_bytes(32, 'big')[-20:],
         randao_commitment=b'\x55'*32,
-        balance=DEFAULT_BALANCE,
-        switch_dynasty=DEFAULT_SWITCH_DYNASTY
+        balance=testing_helpers_config['default_balance'],
+        switch_dynasty=testing_helpers_config['default_switch_dynasty']
     )
 
 
 @pytest.mark.parametrize(
-    'next_shard,active_validators,expected',
+    'active_validators_count, expected',
+    (
+        (1000, 10),
+        (10000, testing_helpers_config['shard_count'])
+    )
+)
+def test_get_crosslink_shards_count(active_validators_count, expected):
+    crosslink_shards_count = get_crosslink_shards_count(
+        active_validators_count,
+        config=testing_helpers_config,
+    )
+    assert crosslink_shards_count == expected
+
+
+@pytest.mark.parametrize(
+    'next_shard, active_validators, expected',
     (
         (
             0,
-            [mock_validator_record(pubkey=pubkey) for pubkey in range(1000)],
+            [
+                mock_validator_record(pubkey, testing_helpers_config)
+                for pubkey in range(1000)
+            ],
             list(range(0, 10))
         ),
         (
             10,
-            [mock_validator_record(pubkey=pubkey) for pubkey in range(1000)],
+            [
+                mock_validator_record(pubkey, testing_helpers_config)
+                for pubkey in range(1000)
+            ],
             list(range(10, 20))
         ),
         (
             10,
-            [mock_validator_record(pubkey=pubkey) for pubkey in range(10001)],
+            [
+                mock_validator_record(pubkey, testing_helpers_config)
+                for pubkey in range(10001)
+            ],
             list(range(10, 20)) + list(range(0, 10))
         ),
     ),
@@ -85,20 +125,27 @@ def test_get_crosslink_shards_and_get_crosslink_notaries(
     )
 
     # test get_crosslink_shards
-    crosslink_shards = get_crosslink_shards(crystallized_state)
+    crosslink_shards = get_crosslink_shards(
+        crystallized_state,
+        config=testing_helpers_config,
+    )
     assert crosslink_shards[0] == next_shard
     assert crosslink_shards == expected
 
     # test get_crosslink_notaries
-    notaries = get_crosslink_notaries(crystallized_state, next_shard)
+    notaries = get_crosslink_notaries(
+        crystallized_state,
+        next_shard,
+        config=testing_helpers_config,
+    )
     assert len(notaries) == \
         len(crystallized_state.active_validators) // crosslink_shard_count
 
 
 @pytest.mark.parametrize(
-    'next_shard,exception',
+    'next_shard, exception',
     (
-        (SHARD_COUNT+1, ValueError),
+        (testing_helpers_config['shard_count']+1, ValueError),
     ),
     ids=[
         'next_shard=SHARD_COUNT+1',
