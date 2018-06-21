@@ -20,7 +20,8 @@ DEFAULT_CONFIG = {
 }
 
 
-def generate_config(attester_count=ATTESTER_COUNT,
+def generate_config(*,
+                    attester_count=ATTESTER_COUNT,
                     attester_reward=ATTESTER_REWARD,
                     epoch_length=EPOCH_LENGTH,
                     shard_count=SHARD_COUNT,

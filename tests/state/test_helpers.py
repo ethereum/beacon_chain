@@ -1,12 +1,7 @@
-import copy
-
 import pytest
-from cytoolz import (
-    merge,
-)
 
 from beacon_chain.state.config import (
-    DEFAULT_CONFIG,
+    generate_config,
 )
 from beacon_chain.state.state_transition import (
     get_shuffling,
@@ -26,9 +21,9 @@ REPLACED_PARAMETERS = {
     'shard_count': 20,
     'notaries_per_crosslink': 100,
 }
-testing_helpers_config = merge(
-    copy.deepcopy(DEFAULT_CONFIG),
-    REPLACED_PARAMETERS,
+testing_helpers_config = generate_config(
+    shard_count=20,
+    notaries_per_crosslink=100,
 )
 
 
@@ -93,6 +88,14 @@ def test_get_crosslink_shards_count(active_validators_count, expected):
             list(range(10, 20))
         ),
         (
+            19,
+            [
+                mock_validator_record(pubkey, testing_helpers_config)
+                for pubkey in range(1000)
+            ],
+            [19] + list(range(0, 9))
+        ),
+        (
             10,
             [
                 mock_validator_record(pubkey, testing_helpers_config)
@@ -104,6 +107,7 @@ def test_get_crosslink_shards_count(active_validators_count, expected):
     ids=[
         'next_shard=0, 1000 validators',
         'next_shard=10, 1000 validators',
+        'next_shard=19, 1000 validators',
         'next_shard=10, 10001 validators',
     ],
 )
