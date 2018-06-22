@@ -5,22 +5,9 @@ from eth_tester import (
     EthereumTester,
     PyEVMBackend
 )
-from web3.providers.eth_tester import (
-    EthereumTesterProvider,
-)
-from web3 import (
-    Web3,
-)
-from web3.contract import (
-    ConciseContract,
-)
-
-from vyper import (
-    compiler,
-    utils as vyper_utils,
-)
-
-REGISTRATION_DEPOSIT = 32
+from web3.providers.eth_tester import EthereumTesterProvider
+from web3 import Web3
+from vyper import compiler
 
 
 def get_dirs(path):
@@ -41,41 +28,42 @@ def registration_code():
 
 
 @pytest.fixture
-def base_tester():
+def tester():
     return EthereumTester(PyEVMBackend())
 
 
 @pytest.fixture
-def a0(base_tester):
-    return base_tester.get_accounts()[0]
+def a0(tester):
+    return tester.get_accounts()[0]
 
 
 @pytest.fixture
-def w3(base_tester):
-    web3 = Web3(EthereumTesterProvider(base_tester))
+def w3(tester):
+    web3 = Web3(EthereumTesterProvider(tester))
     return web3
 
 
 @pytest.fixture
-def tester(w3, base_tester, registration_code):
+def registration_contract(w3, tester, registration_code):
     contract_bytecode = compiler.compile(registration_code)
     contract_abi = compiler.mk_full_signature(registration_code)
     registration = w3.eth.contract(
-        abi=contract_abi, bytecode=contract_bytecode)
+        abi=contract_abi,
+        bytecode=contract_bytecode)
     tx_hash = registration.constructor().transact()
     tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
     registration_deployed = w3.eth.contract(
         address=tx_receipt.contractAddress,
         abi=contract_abi
     )
-    return base_tester, registration_deployed
+    return registration_deployed
 
 
 @pytest.fixture
-def assert_tx_failed(base_tester):
+def assert_tx_failed(tester):
     def assert_tx_failed(function_to_test, exception=eth_tester.exceptions.TransactionFailed):
-        snapshot_id = base_tester.take_snapshot()
+        snapshot_id = tester.take_snapshot()
         with pytest.raises(exception):
             function_to_test()
-        base_tester.revert_to_snapshot(snapshot_id)
+        tester.revert_to_snapshot(snapshot_id)
     return assert_tx_failed

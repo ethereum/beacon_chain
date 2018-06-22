@@ -1,19 +1,17 @@
 import pytest
-from conftest import REGISTRATION_DEPOSIT
 
 
 @pytest.mark.parametrize(
     'success,amount_deposit',
     [
-        (True, REGISTRATION_DEPOSIT),
-        (False, REGISTRATION_DEPOSIT - 1),
-        (False, REGISTRATION_DEPOSIT + 1)
+        (True, 32),
+        (False, 31),
+        (False, 33)
     ]
 )
-def test_deposit(tester, a0, w3, success, amount_deposit, assert_tx_failed):
-    base_tester, registration = tester
+def test_deposit(registration_contract, a0, w3, success, amount_deposit, assert_tx_failed):
 
-    call = registration.functions.deposit(b'\x00'*32, 43, a0, b'\x00'*32)
+    call = registration_contract.functions.deposit(b'\x00'*32, 43, a0, b'\x00'*32)
     if success:
         assert call.transact({"value": w3.toWei(amount_deposit, "ether")})
     else:
