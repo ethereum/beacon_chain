@@ -280,7 +280,7 @@ def update_ffg_and_crosslink_progress(crystallized_state,
         bitfield = crosslink_votes[votekey]
         pubs = []
         for i, index in enumerate(indices):
-            if has_voted(vote.signer_bitfield, i):
+            if has_voted(vote.notary_bitfield, i):
                 pubs.append(crystallized_state.active_validators[index].pubkey)
                 if has_voted(new_ffg_bitfield, index):
                     new_ffg_bitfield = set_voted(new_ffg_bitfield, index)

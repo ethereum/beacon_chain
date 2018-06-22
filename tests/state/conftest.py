@@ -271,11 +271,11 @@ def make_unfinished_block(keymap, config):
             indices = get_crosslink_notaries(crystallized_state, shard, crosslink_shards=crosslink_shards, config=config)
             print('Indices: %r' % indices)
             is_voting = [random.random() < attester_share for _ in indices]
-            signer_bitfield = get_empty_bitfield(len(indices))
+            notary_bitfield = get_empty_bitfield(len(indices))
             for i, voting in enumerate(is_voting):
                 if voting:
-                    signer_bitfield = set_voted(signer_bitfield, i)
-            print('Bitfield:', bin(int.from_bytes(signer_bitfield, 'big')))
+                    notary_bitfield = set_voted(notary_bitfield, i)
+            print('Bitfield:', bin(int.from_bytes(notary_bitfield, 'big')))
             shard_block_hash = blake(bytes([shard]))
             crosslink_attestation_hash = get_crosslink_aggvote_msg(
                 shard,
@@ -292,7 +292,7 @@ def make_unfinished_block(keymap, config):
             v = AggregateVote(
                 shard_id=shard,
                 shard_block_hash=shard_block_hash,
-                signer_bitfield=signer_bitfield,
+                notary_bitfield=notary_bitfield,
                 aggregate_sig=list(bls.aggregate_sigs(sigs))
             )
             shard_aggregate_votes.append(v)
