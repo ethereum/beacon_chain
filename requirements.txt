@@ -3,3 +3,6 @@ py-ecc==1.4.2
 pytest==3.6.1
 web3==4.3.0
 git+https://github.com/ethereum/vyper.git@v0.1.0-beta.1
+
+# for Python versions older than Python 3.6
+pyblake2==1.1.2 
