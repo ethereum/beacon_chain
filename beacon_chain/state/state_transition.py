@@ -23,6 +23,10 @@ from .partial_crosslink_record import (
 from .recent_proposer_record import (
     RecentProposerRecord,
 )
+from .helpers import (
+    get_crosslink_shards,
+    get_crosslink_notaries,
+)
 
 
 def state_hash(crystallized_state, active_state):
@@ -74,18 +78,6 @@ def get_attesters_and_proposer(crystallized_state,
         config
     )
     return indices[:attestation_count], indices[-1]
-
-
-def get_shard_attesters(crystallized_state,
-                        shard_id,
-                        config=DEFAULT_CONFIG):
-    shard_count = config['shard_count']
-
-    vc = len(crystallized_state.active_validators)
-    start_index = (vc * shard_id) // shard_count
-    end_index = (vc * (shard_id + 1)) // shard_count
-
-    return crystallized_state.current_shuffling[start_index:end_index]
 
 
 # Get rewards and vote data
@@ -143,9 +135,17 @@ def process_crosslinks(crystallized_state, crosslinks, config=DEFAULT_CONFIG):
     # Adjust crosslinks
     new_crosslink_records = [x for x in crystallized_state.crosslink_records]
     deltas = [0] * len(crystallized_state.active_validators)
-    # Process shard by shard...
-    for shard in range(config['shard_count']):
-        indices = get_shard_attesters(crystallized_state, shard, config)
+
+    # Process the shards that are selected to be crosslinking...
+    crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
+
+    for shard in crosslink_shards:
+        indices = get_crosslink_notaries(
+            crystallized_state,
+            shard,
+            crosslink_shards=crosslink_shards,
+            config=config,
+        )
         # Get info about the dominant crosslink for this shard
         h, votes, mask = main_crosslink.get(shard, (b'', 0, bytearray((len(indices)+7)//8)))
         # Calculate rewards for participants and penalties for non-participants
@@ -253,13 +253,24 @@ def update_ffg_and_crosslink_progress(crystallized_state,
     new_ffg_bitfield = bytearray(ffg_voter_bitfield)
     total_voters = 0
 
+    # The shards that are selected to be crosslinking
+    crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
+
     for vote in votes:
         attestation = get_crosslink_aggvote_msg(
             vote.shard_id,
             vote.shard_block_hash,
             crystallized_state
         )
-        indices = get_shard_attesters(crystallized_state, vote.shard_id, config)
+        # Check if this shard is in the crosslink shards list
+        assert vote.shard_id in crosslink_shards
+
+        indices = get_crosslink_notaries(
+            crystallized_state,
+            vote.shard_id,
+            crosslink_shards=crosslink_shards,
+            config=config,
+        )
         votekey = vote.shard_block_hash + vote.shard_id.to_bytes(2, 'big')
         if votekey not in crosslink_votes:
             crosslink_votes[votekey] = bytearray((len(indices) + 7) // 8)
@@ -300,12 +311,14 @@ def _initialize_new_epoch(crystallized_state, active_state, config=DEFAULT_CONFI
     # Balance changes, and total vote counts for crosslinks
     deltas_crosslinks, new_crosslink_records = process_crosslinks(
         crystallized_state,
-        active_state.partial_crosslinks
+        active_state.partial_crosslinks,
+        config=config,
     )
     # process recent attesters balance deltas
     deltas_recent_attesters = process_recent_attesters(
         crystallized_state,
-        active_state.recent_attesters
+        active_state.recent_attesters,
+        config=config,
     )
     # process recent proposers balance deltas
     deltas_recent_proposers = process_recent_proposers(
