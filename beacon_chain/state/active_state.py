@@ -34,3 +34,11 @@ class ActiveState():
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
+
+    @property
+    def num_recent_attesters(self):
+        return len(self.recent_attesters)
+
+    @property
+    def num_recent_proposers(self):
+        return len(self.recent_proposers)

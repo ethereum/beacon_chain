@@ -34,7 +34,7 @@ class CrystallizedState():
         'active_validators': [],
         'queued_validators': [],
         'exited_validators': [],
-        'current_shuffling': ['int24'],
+        'current_shuffling': [],
         'current_epoch': 0,
         'last_justified_epoch': 0,
         'last_finalized_epoch': 0,
@@ -49,3 +49,22 @@ class CrystallizedState():
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
+
+        # Check if num_active_validators == num_current_shuffling
+        assert self.num_active_validators == len(self.current_shuffling)
+
+    @property
+    def num_active_validators(self):
+        return len(self.active_validators)
+
+    @property
+    def num_queued_validators(self):
+        return len(self.queued_validators)
+
+    @property
+    def num_exited_validators(self):
+        return len(self.exited_validators)
+
+    @property
+    def num_crosslink_records(self):
+        return len(self.crosslink_records)

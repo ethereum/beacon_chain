@@ -58,3 +58,15 @@ class Block():
     @property
     def hash(self):
         return blake(serialize(self))
+
+    @property
+    def num_attestation_aggregate_sig(self):
+        return len(self.attestation_aggregate_sig)
+
+    @property
+    def num_shard_aggregate_votes(self):
+        return len(self.shard_aggregate_votes)
+
+    @property
+    def num_sig(self):
+        return len(self.sig)

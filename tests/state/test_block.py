@@ -1,6 +1,9 @@
 from beacon_chain.state.block import (
     Block,
 )
+from beacon_chain.state.aggregate_vote import (
+    AggregateVote,
+)
 from beacon_chain.utils.bls import (
     privtopub,
 )
@@ -45,3 +48,15 @@ def test_block_hash():
     assert block.hash != signed_block_hash_1
     assert block.hash != signed_block_hash_2
 
+
+def test_num_properties():
+    aggregate_vote = AggregateVote()
+    block = Block(
+        attestation_aggregate_sig=list(range(2)),
+        shard_aggregate_votes=[aggregate_vote],
+        sig=list(range(3)),
+    )
+
+    assert block.num_attestation_aggregate_sig == 2
+    assert block.num_shard_aggregate_votes == 1
+    assert block.num_sig == 3
