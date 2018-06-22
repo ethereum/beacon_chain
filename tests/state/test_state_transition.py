@@ -17,8 +17,7 @@ def test_height_updates(genesis_crystallized_state,
             (crystallized_state, active_state),
             parent_block,
             0,
-            0.8,
-            []
+            attester_share=0.8,
         )
 
         assert active_state.height == prev_height + 1
