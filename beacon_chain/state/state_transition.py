@@ -76,11 +76,11 @@ def get_attesters_and_proposer(crystallized_state,
                                skip_count,
                                config=DEFAULT_CONFIG):
     attester_count = config['attester_count']
-    attestation_count = min(len(crystallized_state.active_validators), attester_count)
+    attestation_count = min(crystallized_state.num_active_validators, attester_count)
 
     indices = get_shuffling(
         active_state.randao,
-        len(crystallized_state.active_validators),
+        crystallized_state.num_active_validators,
         attestation_count + skip_count + 1,
         config
     )
@@ -89,7 +89,7 @@ def get_attesters_and_proposer(crystallized_state,
 
 # Get rewards and vote data
 def process_ffg_deposits(crystallized_state, ffg_voter_bitfield):
-    total_validators = len(crystallized_state.active_validators)
+    total_validators = crystallized_state.num_active_validators
     finality_distance = crystallized_state.current_epoch - crystallized_state.last_finalized_epoch
     online_reward = 6 if finality_distance <= 2 else 0
     offline_penalty = 3 * finality_distance
@@ -137,7 +137,7 @@ def process_crosslinks(crystallized_state, crosslinks, config=DEFAULT_CONFIG):
             main_crosslink[c.shard_id] = (c.shard_block_hash, vote_count, c.voter_bitfield)
     # Adjust crosslinks
     new_crosslink_records = [x for x in crystallized_state.crosslink_records]
-    deltas = [0] * len(crystallized_state.active_validators)
+    deltas = [0] * crystallized_state.num_active_validators
 
     # Process the shards that are selected to be crosslinking...
     crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
@@ -185,14 +185,14 @@ def process_crosslinks(crystallized_state, crosslinks, config=DEFAULT_CONFIG):
 
 
 def process_recent_attesters(crystallized_state, recent_attesters, config=DEFAULT_CONFIG):
-    deltas = [0] * len(crystallized_state.active_validators)
+    deltas = [0] * crystallized_state.num_active_validators
     for index in recent_attesters:
         deltas[index] += config['attester_reward']
     return deltas
 
 
 def process_recent_proposers(crystallized_state, recent_proposers):
-    deltas = [0] * len(crystallized_state.active_validators)
+    deltas = [0] * crystallized_state.num_active_validators
     for proposer in recent_proposers:
         deltas[proposer.index] += proposer.balance_delta
     return deltas
@@ -212,8 +212,8 @@ def get_incremented_validator_sets(crystallized_state,
         else:
             i += 1
     induct = min(
-        len(crystallized_state.queued_validators),
-        len(crystallized_state.active_validators) // 30 + 1
+        crystallized_state.num_queued_validators,
+        crystallized_state.num_active_validators // 30 + 1
     )
     for i in range(induct):
         if crystallized_state.queued_validators[i].switch_dynasty > crystallized_state.dynasty + 1:

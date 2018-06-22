@@ -67,7 +67,7 @@ def test_get_crosslink_shards_and_get_crosslink_notaries(
         config=config,
     )
     crosslink_shard_count = get_crosslink_shards_count(
-        len(crystallized_state.active_validators)
+        crystallized_state.num_active_validators
     )
 
     # test get_crosslink_shards
@@ -85,7 +85,7 @@ def test_get_crosslink_shards_and_get_crosslink_notaries(
         config=config,
     )
     assert len(notaries) == \
-        len(crystallized_state.active_validators) // crosslink_shard_count
+        crystallized_state.num_active_validators // crosslink_shard_count
 
 
 @pytest.mark.parametrize(
