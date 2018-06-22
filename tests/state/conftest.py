@@ -43,6 +43,10 @@ from beacon_chain.state.helpers import (
 )
 
 import beacon_chain.utils.bls as bls
+from beacon_chain.utils.bitfield import (
+    get_empty_bitfield,
+    set_voted,
+)
 from beacon_chain.utils.blake import (
     blake,
 )
@@ -235,21 +239,22 @@ def make_unfinished_block(keymap, config):
         print('Selected block proposer: %d' % proposer)
 
         # Randomly pick indices to include
-        bitfield = [1 if random.random() < attester_share else 0 for i in indices]
+        is_voting = [random.random() < attester_share for _ in indices]
         # Attestations
         sigs = [
             bls.sign(
                 parent_attestation,
                 keymap[crystallized_state.active_validators[indices[i]].pubkey]
             )
-            for i in range(len(indices)) if bitfield[i]
+            for i, voting in enumerate(is_voting) if voting
         ]
         attestation_aggregate_sig = bls.aggregate_sigs(sigs)
         print('Aggregated sig')
 
-        attestation_bitfield = bytearray((len(bitfield)-1) // 8 + 1)
-        for i, b in enumerate(bitfield):
-            attestation_bitfield[i//8] ^= (128 >> (i % 8)) * b
+        attestation_bitfield = get_empty_bitfield(len(indices))
+        for i, voting in enumerate(is_voting):
+            if voting:
+                attestation_bitfield = set_voted(attestation_bitfield, i)
         print('Aggregate bitfield:', bin(int.from_bytes(attestation_bitfield, 'big')))
 
         # Randomly pick indices to include for crosslinks
@@ -265,11 +270,12 @@ def make_unfinished_block(keymap, config):
             print('Making crosslink in shard %d' % shard)
             indices = get_crosslink_notaries(crystallized_state, shard, crosslink_shards=crosslink_shards, config=config)
             print('Indices: %r' % indices)
-            bitfield = [1 if random.random() < crosslinker_share else 0 for i in indices]
-            bitmask = bytearray((len(bitfield)+7) // 8)
-            for i, b in enumerate(bitfield):
-                bitmask[i//8] ^= (128 >> (i % 8)) * b
-            print('Bitmask:', bin(int.from_bytes(bitmask, 'big')))
+            is_voting = [random.random() < attester_share for _ in indices]
+            signer_bitfield = get_empty_bitfield(len(indices))
+            for i, voting in enumerate(is_voting):
+                if voting:
+                    signer_bitfield = set_voted(signer_bitfield, i)
+            print('Bitfield:', bin(int.from_bytes(signer_bitfield, 'big')))
             shard_block_hash = blake(bytes([shard]))
             crosslink_attestation_hash = get_crosslink_aggvote_msg(
                 shard,
@@ -281,12 +287,12 @@ def make_unfinished_block(keymap, config):
                     crosslink_attestation_hash,
                     keymap[crystallized_state.active_validators[indices[i]].pubkey]
                 )
-                for i in range(len(indices)) if bitfield[i]
+                for i, voting in enumerate(is_voting) if voting
             ]
             v = AggregateVote(
                 shard_id=shard,
                 shard_block_hash=shard_block_hash,
-                signer_bitmask=bitmask,
+                signer_bitfield=signer_bitfield,
                 aggregate_sig=list(bls.aggregate_sigs(sigs))
             )
             shard_aggregate_votes.append(v)
