@@ -8,18 +8,6 @@ MAX_VALIDATORS = 2**24
 NOTARIES_PER_CROSSLINK = 100
 
 
-DEFAULT_CONFIG = {
-    'attester_count': ATTESTER_COUNT,
-    'attester_reward': ATTESTER_REWARD,
-    'epoch_length': EPOCH_LENGTH,
-    'shard_count': SHARD_COUNT,
-    'default_balance': DEFAULT_BALANCE,
-    'max_validators': MAX_VALIDATORS,
-    'default_switch_dynasty': DEFAULT_SWITCH_DYNASTY,
-    'notaries_per_crosslink': NOTARIES_PER_CROSSLINK,
-}
-
-
 def generate_config(*,
                     attester_count=ATTESTER_COUNT,
                     attester_reward=ATTESTER_REWARD,
@@ -39,3 +27,6 @@ def generate_config(*,
         'default_switch_dynasty': default_switch_dynasty,
         'notaries_per_crosslink': notaries_per_crosslink,
     }
+
+
+DEFAULT_CONFIG = generate_config()

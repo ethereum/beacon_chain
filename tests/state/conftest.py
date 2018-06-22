@@ -9,6 +9,7 @@ from beacon_chain.state.config import (
     EPOCH_LENGTH,
     MAX_VALIDATORS,
     SHARD_COUNT,
+    NOTARIES_PER_CROSSLINK,
     generate_config
 )
 from beacon_chain.state.active_state import (
@@ -116,19 +117,26 @@ def max_validators():
 
 
 @pytest.fixture
+def notaries_per_crosslink():
+    return NOTARIES_PER_CROSSLINK
+
+
+@pytest.fixture
 def config(attester_count,
            attester_reward,
            epoch_length,
            shard_count,
            default_balance,
-           max_validators):
+           max_validators,
+           notaries_per_crosslink):
     return generate_config(
         attester_count=attester_count,
         attester_reward=attester_reward,
         epoch_length=epoch_length,
         shard_count=shard_count,
         default_balance=default_balance,
-        max_validators=max_validators
+        max_validators=max_validators,
+        notaries_per_crosslink=notaries_per_crosslink,
     )
 
 
