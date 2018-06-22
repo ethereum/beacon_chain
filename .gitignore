@@ -2,6 +2,6 @@
 venv
 .DS_Store
 .pytest_cache
+.python-version
 test-reports/
-
 notes.txt
