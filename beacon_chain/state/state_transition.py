@@ -253,7 +253,7 @@ def update_ffg_and_crosslink_progress(crystallized_state,
     new_ffg_bitfield = bytearray(ffg_voter_bitfield)
     total_voters = 0
 
-    # The shared that are selected to be crosslinking
+    # The shards that are selected to be crosslinking
     crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
 
     for vote in votes:
