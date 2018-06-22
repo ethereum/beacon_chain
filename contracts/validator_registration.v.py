@@ -20,5 +20,8 @@ def deposit(
 
     self.used_pubkey[pubkey] = True
 
-    log.Deposit(pubkey, withdrawal_shard_id,
-                withdrawal_address, randao_commitment)
+    log.Deposit(
+        pubkey,
+        withdrawal_shard_id,
+        withdrawal_address,
+        randao_commitment)
