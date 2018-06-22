@@ -42,7 +42,8 @@ from beacon_chain.state.helpers import (
     get_crosslink_notaries,
 )
 
-import beacon_chain.utils.bls as bls
+
+import beacon_chain.utils.bls
 from beacon_chain.utils.bitfield import (
     get_empty_bitfield,
     set_voted,
@@ -54,10 +55,29 @@ from beacon_chain.utils.simpleserialize import (
     serialize,
 )
 
+bls = beacon_chain.utils.bls
 
 DEFAULT_SHUFFLING_SEED = b'\35'*32
 DEFAULT_RANDAO = b'\45'*32
 DEFAULT_NUM_VALIDATORS = 40
+
+
+def bls_verify_mock(m, pub, sig):
+    return True
+
+
+def bls_sign_mock(m, k):
+    return 0, 0
+
+
+@pytest.fixture(autouse=True)
+def mock_bls_verify(mocker):
+    mocker.patch('beacon_chain.utils.bls.verify', side_effect=bls_verify_mock)
+
+
+@pytest.fixture(autouse=True)
+def mock_bls_sign(mocker):
+    mocker.patch('beacon_chain.utils.bls.sign', side_effect=bls_sign_mock)
 
 
 @pytest.fixture
@@ -350,3 +370,6 @@ def mock_make_child(keymap, make_unfinished_block, config):
 
         return block, new_crystallized_state, new_active_state
     return mock_make_child
+
+
+
