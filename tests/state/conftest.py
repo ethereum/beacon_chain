@@ -34,9 +34,12 @@ from beacon_chain.state.state_transition import (
     compute_state_transition,
     get_attesters_and_proposer,
     get_crosslink_aggvote_msg,
-    get_shard_attesters,
     get_shuffling,
     state_hash,
+)
+from beacon_chain.state.helpers import (
+    get_crosslink_shards,
+    get_crosslink_notaries,
 )
 
 import beacon_chain.utils.bls as bls
@@ -152,7 +155,8 @@ def init_validator_keys(pubkeys, num_validators):
 
 @pytest.fixture
 def genesis_crystallized_state(init_validator_keys,
-                               init_shuffling_seed):
+                               init_shuffling_seed,
+                               config):
     return CrystallizedState(
         active_validators=[ValidatorRecord(
             pubkey=pub,
@@ -164,7 +168,7 @@ def genesis_crystallized_state(init_validator_keys,
         ) for pub in init_validator_keys],
         queued_validators=[],
         exited_validators=[],
-        current_shuffling=get_shuffling(init_shuffling_seed, len(init_validator_keys)),
+        current_shuffling=get_shuffling(init_shuffling_seed, len(init_validator_keys), config=config),
         current_epoch=1,
         last_justified_epoch=0,
         last_finalized_epoch=0,
@@ -214,7 +218,10 @@ def make_unfinished_block(keymap, config):
                               parent,
                               skips,
                               attester_share=0.8,
-                              crosslink_shards=[]):
+                              crosslink_shards_and_shares=None):
+        if crosslink_shards_and_shares is None:
+            crosslink_shards_and_shares = []
+
         crystallized_state, active_state = parent_state
         parent_attestation = serialize(parent)
         indices, proposer = get_attesters_and_proposer(
@@ -247,9 +254,16 @@ def make_unfinished_block(keymap, config):
 
         # Randomly pick indices to include for crosslinks
         shard_aggregate_votes = []
-        for shard, crosslinker_share in crosslink_shards:
+    
+        # The shared that are selected to be crosslinking
+        crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
+
+        for shard, crosslinker_share in crosslink_shards_and_shares:
+            # Check if this shard is in the crosslink shards list
+            assert shard in crosslink_shards
+
             print('Making crosslink in shard %d' % shard)
-            indices = get_shard_attesters(crystallized_state, shard, config)
+            indices = get_crosslink_notaries(crystallized_state, shard, crosslink_shards=crosslink_shards, config=config)
             print('Indices: %r' % indices)
             bitfield = [1 if random.random() < crosslinker_share else 0 for i in indices]
             bitmask = bytearray((len(bitfield)+7) // 8)
@@ -276,7 +290,7 @@ def make_unfinished_block(keymap, config):
                 aggregate_sig=list(bls.aggregate_sigs(sigs))
             )
             shard_aggregate_votes.append(v)
-        print('Added %d shard aggregate votes' % len(crosslink_shards))
+        print('Added %d shard aggregate votes' % len(crosslink_shards_and_shares))
 
         block = Block(
             parent_hash=blake(parent_attestation),
@@ -298,14 +312,17 @@ def mock_make_child(keymap, make_unfinished_block, config):
                         parent,
                         skips,
                         attester_share=0.8,
-                        crosslink_shards=[]):
+                        crosslink_shards_and_shares=None):
+        if crosslink_shards_and_shares is None:
+            crosslink_shards_and_shares = []
+    
         crystallized_state, active_state = parent_state
         block, proposer = make_unfinished_block(
             parent_state,
             parent,
             skips,
             attester_share,
-            crosslink_shards
+            crosslink_shards_and_shares,
         )
         print('Generated preliminary block header')
 

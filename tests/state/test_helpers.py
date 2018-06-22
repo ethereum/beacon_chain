@@ -1,5 +1,8 @@
 import pytest
 
+from beacon_chain.state.config import (
+    DEFAULT_CONFIG,
+)
 from beacon_chain.state.state_transition import (
     get_shuffling,
 )
@@ -17,7 +20,8 @@ def create_crystallized_state(
         genesis_crystallized_state,
         init_shuffling_seed,
         next_shard,
-        active_validators=None):
+        active_validators=None,
+        config=DEFAULT_CONFIG):
     crystallized_state = genesis_crystallized_state
     crystallized_state.next_shard = next_shard
     if active_validators is not None:
@@ -25,6 +29,7 @@ def create_crystallized_state(
         crystallized_state.current_shuffling = get_shuffling(
             init_shuffling_seed,
             len(active_validators),
+            config=config,
         )
     return crystallized_state
 
@@ -93,6 +98,7 @@ def test_get_crosslink_shards_and_get_crosslink_notaries(
         init_shuffling_seed,
         next_shard,
         active_validators,
+        config=config,
     )
     crosslink_shard_count = get_crosslink_shards_count(
         len(crystallized_state.active_validators)

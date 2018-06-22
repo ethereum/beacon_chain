@@ -29,6 +29,7 @@ def get_crosslink_shards(crystallized_state, config=DEFAULT_CONFIG):
 
     crosslink_shards_count = get_crosslink_shards_count(
         len(crystallized_state.active_validators),
+        config=config,
     )
 
     if start_from + crosslink_shards_count <= shard_count:
@@ -44,10 +45,16 @@ def get_crosslink_shards(crystallized_state, config=DEFAULT_CONFIG):
 def get_crosslink_notaries(
         crystallized_state,
         shard_id,
+        crosslink_shards=None,
         config=DEFAULT_CONFIG):
     """Returns a list of notaries that will notarize `shard_id`
     """
-    crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
+    if crosslink_shards is None:
+        crosslink_shards = get_crosslink_shards(
+            crystallized_state,
+            config=config,
+        )
+
     if shard_id not in crosslink_shards:
         return None
 
