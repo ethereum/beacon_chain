@@ -1,8 +1,8 @@
 Deposit: event({
-    pubkey: bytes32,
-    withdrawal_shard_id: uint256,
-    withdrawal_address: address,
-    randao_commitment: bytes32})
+    _pubkey: bytes32,
+    _withdrawal_shard_id: uint256,
+    _withdrawal_address: address,
+    _randao_commitment: bytes32})
 
 
 used_pubkey: public(bool[bytes32])
