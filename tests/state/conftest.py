@@ -255,7 +255,7 @@ def make_unfinished_block(keymap, config):
         # Randomly pick indices to include for crosslinks
         shard_aggregate_votes = []
     
-        # The shared that are selected to be crosslinking
+        # The shards that are selected to be crosslinking
         crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
 
         for shard, crosslinker_share in crosslink_shards_and_shares:
