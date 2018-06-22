@@ -6,7 +6,8 @@ import pytest
     [
         (True, 32),
         (False, 31),
-        (False, 33)
+        (False, 33),
+        (False, 0)
     ]
 )
 def test_deposit(registration_contract, a0, w3, success, amount_deposit, assert_tx_failed):
