@@ -1,5 +1,5 @@
 eth-tester==0.1.0b27
-py-ecc==1.4.2
+py-ecc==1.4.3
 pytest==3.6.1
 web3==4.3.0
 git+https://github.com/ethereum/vyper.git@v0.1.0-beta.1
