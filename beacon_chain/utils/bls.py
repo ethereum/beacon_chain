@@ -2,6 +2,8 @@ from .blake import blake
 from py_ecc.optimized_bn128 import (  # NOQA
     G1,
     G2,
+    Z1,
+    Z2,
     neg,
     add,
     multiply,
@@ -109,14 +111,14 @@ def verify(m, pub, sig):
 
 
 def aggregate_sigs(sigs):
-    o = FQ2([1, 0]), FQ2([1, 0]), FQ2([0, 0])
+    o = Z2
     for s in sigs:
         o = add(o, decompress_G2(s))
     return compress_G2(o)
 
 
 def aggregate_pubs(pubs):
-    o = FQ(1), FQ(1), FQ(0)
+    o = Z1
     for p in pubs:
         o = add(o, decompress_G1(p))
     return compress_G1(o)
