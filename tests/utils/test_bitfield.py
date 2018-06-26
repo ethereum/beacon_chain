@@ -4,6 +4,7 @@ from beacon_chain.utils.bitfield import (
     has_voted,
     set_voted,
     get_bitfield_length,
+    get_empty_bitfield,
 )
 
 
@@ -22,10 +23,9 @@ def test_bitfield_length(attester_count, bitfield_length):
     assert get_bitfield_length(attester_count) == bitfield_length
 
 
-
 def test_empty_bitfield():
     attesters = list(range(10))
-    bitfield = b'\x00' * get_bitfield_length(len(attesters))
+    bitfield = get_empty_bitfield(len(attesters))
 
     for attester in attesters:
         assert not has_voted(bitfield, attester)
@@ -33,7 +33,7 @@ def test_empty_bitfield():
 
 def test_bitfield_single_votes():
     attesters = list(range(10))
-    bitfield = b'\x00' * get_bitfield_length(len(attesters))
+    bitfield = get_empty_bitfield(len(attesters))
 
     assert set_voted(bitfield, 0) == b'\x80\x00'
     assert set_voted(bitfield, 1) == b'\x40\x00'
@@ -54,7 +54,7 @@ def test_bitfield_single_votes():
 def test_bitfield_all_votes():
     attesters = list(range(10))
 
-    bitfield = b'\x00' * get_bitfield_length(len(attesters))
+    bitfield = get_empty_bitfield(len(attesters))
     for attester in attesters:
         bitfield = set_voted(bitfield, attester)
 
@@ -67,9 +67,9 @@ def test_bitfield_some_votes():
     attesters = list(range(10))
     voters = [0, 4, 5, 9]
 
-    bitfield = b'\x00' * get_bitfield_length(len(attesters))
+    bitfield = get_empty_bitfield(len(attesters))
     for voter in voters:
-        bitfield = set_voted(bitfield, voter) 
+        bitfield = set_voted(bitfield, voter)
 
     assert bitfield == b'\x8c\x40'
 
@@ -81,7 +81,7 @@ def test_bitfield_some_votes():
 
 
 def test_bitfield_multiple_votes():
-    bitfield = b'\x00'
+    bitfield = get_empty_bitfield(1)
     bitfield = set_voted(bitfield, 0)
     bitfield = set_voted(bitfield, 0)
     assert has_voted(bitfield, 0)

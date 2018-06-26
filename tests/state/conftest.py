@@ -239,27 +239,27 @@ def make_unfinished_block(keymap, config):
         print('Selected block proposer: %d' % proposer)
 
         # Randomly pick indices to include
-        is_voting = [random.random() < attester_share for _ in indices]
+        is_attesting = [random.random() < attester_share for _ in indices]
         # Attestations
         sigs = [
             bls.sign(
                 parent_attestation,
                 keymap[crystallized_state.active_validators[indices[i]].pubkey]
             )
-            for i, voting in enumerate(is_voting) if voting
+            for i, attesting in enumerate(is_attesting) if attesting
         ]
         attestation_aggregate_sig = bls.aggregate_sigs(sigs)
         print('Aggregated sig')
 
         attestation_bitfield = get_empty_bitfield(len(indices))
-        for i, voting in enumerate(is_voting):
-            if voting:
+        for i, attesting in enumerate(is_attesting):
+            if attesting:
                 attestation_bitfield = set_voted(attestation_bitfield, i)
         print('Aggregate bitfield:', bin(int.from_bytes(attestation_bitfield, 'big')))
 
         # Randomly pick indices to include for crosslinks
         shard_aggregate_votes = []
-    
+
         # The shards that are selected to be crosslinking
         crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
 
@@ -270,10 +270,10 @@ def make_unfinished_block(keymap, config):
             print('Making crosslink in shard %d' % shard)
             indices = get_crosslink_notaries(crystallized_state, shard, crosslink_shards=crosslink_shards, config=config)
             print('Indices: %r' % indices)
-            is_voting = [random.random() < attester_share for _ in indices]
+            is_notarizing = [random.random() < attester_share for _ in indices]
             notary_bitfield = get_empty_bitfield(len(indices))
-            for i, voting in enumerate(is_voting):
-                if voting:
+            for i, notarizing in enumerate(is_notarizing):
+                if notarizing:
                     notary_bitfield = set_voted(notary_bitfield, i)
             print('Bitfield:', bin(int.from_bytes(notary_bitfield, 'big')))
             shard_block_hash = blake(bytes([shard]))
@@ -287,7 +287,7 @@ def make_unfinished_block(keymap, config):
                     crosslink_attestation_hash,
                     keymap[crystallized_state.active_validators[indices[i]].pubkey]
                 )
-                for i, voting in enumerate(is_voting) if voting
+                for i, notarizing in enumerate(is_notarizing) if notarizing
             ]
             v = AggregateVote(
                 shard_id=shard,
@@ -321,7 +321,7 @@ def mock_make_child(keymap, make_unfinished_block, config):
                         crosslink_shards_and_shares=None):
         if crosslink_shards_and_shares is None:
             crosslink_shards_and_shares = []
-    
+
         crystallized_state, active_state = parent_state
         block, proposer = make_unfinished_block(
             parent_state,
