@@ -3,13 +3,13 @@ class AggregateVote():
     fields = {
         'shard_id': 'int16',
         'shard_block_hash': 'hash32',
-        'signer_bitmask': 'bytes',
+        'notary_bitfield': 'bytes',
         'aggregate_sig': ['int256']
     }
     defaults = {
         'shard_id': 0,
         'shard_block_hash': b'\x00'*32,
-        'signer_bitmask': b'',
+        'notary_bitfield': b'',
         'aggregate_sig': [0, 0],
     }
 
