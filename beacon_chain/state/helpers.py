@@ -28,7 +28,7 @@ def get_crosslink_shards(crystallized_state, config=DEFAULT_CONFIG):
         )
 
     crosslink_shards_count = get_crosslink_shards_count(
-        len(crystallized_state.active_validators),
+        crystallized_state.num_active_validators,
         config=config,
     )
 
@@ -54,18 +54,19 @@ def get_crosslink_notaries(
             crystallized_state,
             config=config,
         )
+    num_crosslink_shards = len(crosslink_shards)
 
     if shard_id not in crosslink_shards:
         return None
 
-    num_active_validators = len(crystallized_state.active_validators)
+    num_active_validators = crystallized_state.num_active_validators
 
     start = (
         num_active_validators * crosslink_shards.index(shard_id) //
-        len(crosslink_shards)
+        num_crosslink_shards
     )
     end = (
         num_active_validators * (crosslink_shards.index(shard_id) + 1) //
-        len(crosslink_shards)
+        num_crosslink_shards
     )
     return crystallized_state.current_shuffling[start:end]

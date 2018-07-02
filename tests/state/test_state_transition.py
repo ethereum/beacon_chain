@@ -33,7 +33,7 @@ def test_recent_proposer_is_added(genesis_crystallized_state,
     active_state = genesis_active_state
     parent_block = genesis_block
 
-    assert len(active_state.recent_proposers) == 0
+    assert active_state.num_recent_proposers == 0
 
     for _ in range(epoch_length * 2):
         child_block, crystallized_state, active_state = mock_make_child(
@@ -48,7 +48,7 @@ def test_recent_proposer_is_added(genesis_crystallized_state,
         else:
             base = 1
 
-        assert len(active_state.recent_proposers) == \
+        assert active_state.num_recent_proposers == \
             base + (active_state.height - 1) % epoch_length
         parent_block = child_block
 
@@ -73,7 +73,7 @@ def test_proposer_balance_delta(genesis_crystallized_state,
         1.0  # full attestation
     )
 
-    assert len(active_state.recent_proposers) == 1
+    assert active_state.num_recent_proposers == 1
     assert active_state.recent_proposers[0].balance_delta == attester_count
 
     fraction_attested = 0.6
@@ -84,7 +84,7 @@ def test_proposer_balance_delta(genesis_crystallized_state,
         fraction_attested  # fractional attestation
     )
 
-    assert len(active_state.recent_proposers) == 2
+    assert active_state.num_recent_proposers == 2
 
     # count number of actual attesters
     bitfield = child_block.attestation_bitfield
@@ -105,7 +105,7 @@ def test_recent_attesters_added(genesis_crystallized_state,
     active_state = genesis_active_state
     parent_block = genesis_block
 
-    assert len(active_state.recent_attesters) == 0
+    assert active_state.num_recent_attesters == 0
 
     for _ in range(epoch_length * 2):
         child_block, crystallized_state, active_state = mock_make_child(
@@ -121,7 +121,7 @@ def test_recent_attesters_added(genesis_crystallized_state,
         else:
             base = 1
 
-        assert len(active_state.recent_attesters) == \
+        assert active_state.num_recent_attesters == \
             (base + (active_state.height - 1) % epoch_length) * attester_count
 
         parent_block = child_block

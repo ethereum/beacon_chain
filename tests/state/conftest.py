@@ -66,7 +66,6 @@ def sample_active_state_params():
         'height': 30,
         'randao': b'\x35'*32,
         'ffg_voter_bitfield': b'\x42\x60',
-        'balance_deltas': [1, 2, 3],
         'recent_attesters': [0, 2, 10],
         'partial_crosslinks': [],
         'total_skip_count': 33,
@@ -192,7 +191,7 @@ def genesis_active_state(genesis_crystallized_state,
     return ActiveState(
         height=1,
         randao=init_randao,
-        ffg_voter_bitfield=bytearray((len(genesis_crystallized_state.active_validators) + 7) // 8),
+        ffg_voter_bitfield=get_empty_bitfield(genesis_crystallized_state.num_active_validators),
         balance_deltas=[],
         partial_crosslinks=[],
         total_skip_count=0

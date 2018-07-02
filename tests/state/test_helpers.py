@@ -1,49 +1,15 @@
 import pytest
 
-from beacon_chain.state.config import (
-    DEFAULT_CONFIG,
-)
-from beacon_chain.state.state_transition import (
-    get_shuffling,
-)
-from beacon_chain.state.validator_record import (
-    ValidatorRecord,
-)
 from beacon_chain.state.helpers import (
     get_crosslink_shards,
     get_crosslink_notaries,
     get_crosslink_shards_count,
 )
 
-
-def create_crystallized_state(
-        genesis_crystallized_state,
-        init_shuffling_seed,
-        next_shard,
-        active_validators=None,
-        config=DEFAULT_CONFIG):
-    crystallized_state = genesis_crystallized_state
-    crystallized_state.next_shard = next_shard
-    if active_validators is not None:
-        crystallized_state.active_validators = active_validators
-        crystallized_state.current_shuffling = get_shuffling(
-            init_shuffling_seed,
-            len(active_validators),
-            config=config,
-        )
-    return crystallized_state
-
-
-def mock_validator_record(pubkey, config):
-    return ValidatorRecord(
-        pubkey=pubkey,
-        withdrawal_shard=0,
-        withdrawal_address=pubkey.to_bytes(32, 'big')[-20:],
-        randao_commitment=b'\x55'*32,
-        balance=config['default_balance'],
-        switch_dynasty=config['default_switch_dynasty']
-    )
-
+from tests.state.helpers import (
+    mock_crystallized_state,
+    mock_validator_record,
+)
 
 @pytest.mark.parametrize(
     'active_validators_count, shard_count, notaries_per_crosslink, expected',
@@ -93,7 +59,7 @@ def test_get_crosslink_shards_and_get_crosslink_notaries(
         mock_validator_record(pubkey, config)
         for pubkey in range(num_validators)
     ]
-    crystallized_state = create_crystallized_state(
+    crystallized_state = mock_crystallized_state(
         genesis_crystallized_state,
         init_shuffling_seed,
         next_shard,
@@ -101,7 +67,7 @@ def test_get_crosslink_shards_and_get_crosslink_notaries(
         config=config,
     )
     crosslink_shard_count = get_crosslink_shards_count(
-        len(crystallized_state.active_validators)
+        crystallized_state.num_active_validators
     )
 
     # test get_crosslink_shards
@@ -119,7 +85,7 @@ def test_get_crosslink_shards_and_get_crosslink_notaries(
         config=config,
     )
     assert len(notaries) == \
-        len(crystallized_state.active_validators) // crosslink_shard_count
+        crystallized_state.num_active_validators // crosslink_shard_count
 
 
 @pytest.mark.parametrize(
@@ -134,7 +100,7 @@ def test_get_crosslink_shards_error(genesis_crystallized_state,
                                     shard_count,
                                     exception,
                                     config):
-    crystallized_state = create_crystallized_state(
+    crystallized_state = mock_crystallized_state(
         genesis_crystallized_state,
         init_shuffling_seed,
         next_shard

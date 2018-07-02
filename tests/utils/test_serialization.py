@@ -71,7 +71,6 @@ def test_active_state_serialization():
         ],
         height=555,
         randao=b'\x88'*32,
-        balance_deltas=[5, 7, 9, 579] + [3] * 333
     )
     ds = deserialize(serialize(s, type(s)), type(s))
     assert eq(s, ds)

@@ -37,5 +37,18 @@ def test_recent_proposers(sample_active_state_params,
     sample_active_state_params['recent_proposers'] = [recent_proposer]
 
     active_state = ActiveState(**sample_active_state_params)
-    assert len(active_state.recent_proposers) == 1
+    assert active_state.num_recent_proposers == 1
     assert eq(active_state.recent_proposers[0], recent_proposer)
+
+
+def test_num_properties():
+    activate_state = ActiveState(
+        recent_attesters=[1, 2],
+        recent_proposers=[
+            RecentProposerRecord(index=index)
+            for index in range(3)
+        ]
+    )
+
+    assert activate_state.num_recent_attesters == 2
+    assert activate_state.num_recent_proposers == 3
