@@ -37,11 +37,11 @@ def get_attesters_and_proposer(crystallized_state,
                                skip_count,
                                config=DEFAULT_CONFIG):
     attester_count = config['attester_count']
-    attestation_count = min(len(crystallized_state.active_validators), attester_count)
+    attestation_count = min(crystallized_state.num_active_validators, attester_count)
 
     indices = get_shuffling(
         active_state.randao,
-        len(crystallized_state.active_validators),
+        crystallized_state.num_active_validators,
         attestation_count + skip_count + 1,
         config
     )

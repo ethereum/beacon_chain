@@ -138,8 +138,8 @@ def test_get_attesters_and_proposer(genesis_crystallized_state,
         active_state,
         skip_count=0,
     )
-    assert 0 <= original_proposer < len(crystallized_state.active_validators)
-    assert all(0 <= i < len(crystallized_state.active_validators) for i in original_attesters)
+    assert 0 <= original_proposer < crystallized_state.num_active_validators
+    assert all(0 <= i < crystallized_state.num_active_validators for i in original_attesters)
     assert len(original_attesters) == DEFAULT_CONFIG['attester_count']
 
     skip_attesters, skip_proposer = get_attesters_and_proposer(
@@ -160,7 +160,7 @@ def test_get_attesters_and_proposer(genesis_crystallized_state,
     assert reshuffled_proposer != original_proposer
 
     crystallized_state.active_validators = crystallized_state.active_validators[:3]
-    assert len(crystallized_state.active_validators) == 3
+    assert crystallized_state.num_active_validators == 3
     few_attesters, few_proposer = get_attesters_and_proposer(
         crystallized_state,
         active_state,
