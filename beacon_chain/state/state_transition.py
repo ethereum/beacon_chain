@@ -31,36 +31,15 @@ from .recent_proposer_record import (
     RecentProposerRecord,
 )
 from .helpers import (
+    get_attesters_and_proposer,
     get_crosslink_shards,
     get_crosslink_notaries,
+    get_shuffling,
 )
 
 
 def state_hash(crystallized_state, active_state):
     return blake(serialize(crystallized_state)) + blake(serialize(active_state))
-
-
-def get_shuffling(seed, validator_count, sample=None, config=DEFAULT_CONFIG):
-    max_validators = config['max_validators']
-    assert validator_count <= max_validators
-
-    rand_max = max_validators - max_validators % validator_count
-    o = list(range(validator_count))
-    source = seed
-    i = 0
-    maxvalue = sample if sample is not None else validator_count
-    while i < maxvalue:
-        source = blake(source)
-        for pos in range(0, 30, 3):
-            m = int.from_bytes(source[pos:pos+3], 'big')
-            remaining = validator_count - i
-            if remaining == 0:
-                break
-            if validator_count < rand_max:
-                replacement_pos = (m % remaining) + i
-                o[i], o[replacement_pos] = o[replacement_pos], o[i]
-                i += 1
-    return o[:maxvalue]
 
 
 def get_crosslink_aggvote_msg(shard_id, shard_block_hash, crystallized_state):
@@ -69,22 +48,6 @@ def get_crosslink_aggvote_msg(shard_id, shard_block_hash, crystallized_state):
         crystallized_state.current_checkpoint + \
         crystallized_state.current_epoch.to_bytes(8, 'big') + \
         crystallized_state.last_justified_epoch.to_bytes(8, 'big')
-
-
-def get_attesters_and_proposer(crystallized_state,
-                               active_state,
-                               skip_count,
-                               config=DEFAULT_CONFIG):
-    attester_count = config['attester_count']
-    attestation_count = min(crystallized_state.num_active_validators, attester_count)
-
-    indices = get_shuffling(
-        active_state.randao,
-        crystallized_state.num_active_validators,
-        attestation_count + skip_count + 1,
-        config
-    )
-    return indices[:attestation_count], indices[-1]
 
 
 # Get rewards and vote data
