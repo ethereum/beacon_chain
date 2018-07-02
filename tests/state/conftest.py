@@ -191,7 +191,7 @@ def genesis_active_state(genesis_crystallized_state,
     return ActiveState(
         height=1,
         randao=init_randao,
-        ffg_voter_bitfield=bytearray((genesis_crystallized_state.num_active_validators + 7) // 8),
+        ffg_voter_bitfield=get_empty_bitfield(genesis_crystallized_state.num_active_validators),
         balance_deltas=[],
         partial_crosslinks=[],
         total_skip_count=0
