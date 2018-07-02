@@ -49,7 +49,7 @@ def get_attesters_and_proposer(crystallized_state,
 
 
 def get_crosslink_shards_count(active_validators_count, config=DEFAULT_CONFIG):
-    """Returns how many shards in the `crosslink_shards` list
+    """Returns the number of shards in the `crosslink_shards` list
     """
     shard_count = config['shard_count']
     crosslink_shards_count = (
@@ -61,7 +61,7 @@ def get_crosslink_shards_count(active_validators_count, config=DEFAULT_CONFIG):
 
 
 def get_crosslink_shards(crystallized_state, config=DEFAULT_CONFIG):
-    """Returns a list of shards that will be crosslinking
+    """Returns a list of shards that will be crosslinked
     """
     shard_count = config['shard_count']
     start_from = crystallized_state.next_shard
