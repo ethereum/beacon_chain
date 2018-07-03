@@ -1,3 +1,10 @@
+from beacon_chain.state.state_transition import (
+    process_recent_attesters,
+    process_recent_proposers,
+)
+from beacon_chain.state.recent_proposer_record import (
+    RecentProposerRecord,
+)
 
 
 def test_height_updates(genesis_crystallized_state,
@@ -125,3 +132,45 @@ def test_recent_attesters_added(genesis_crystallized_state,
             (base + (active_state.height - 1) % epoch_length) * attester_count
 
         parent_block = child_block
+
+
+def test_recent_attester_processing(genesis_crystallized_state, config, attester_reward):
+    zero_deltas = process_recent_attesters(genesis_crystallized_state, [], config=config)
+    assert len(zero_deltas) == genesis_crystallized_state.num_active_validators
+    assert all(delta == 0 for delta in zero_deltas)
+
+    some_validators = [0, 5, 39]
+    some_deltas = process_recent_attesters(
+        genesis_crystallized_state,
+        some_validators,
+        config=config,
+    )
+    assert len(some_deltas) == genesis_crystallized_state.num_active_validators
+    assert all(
+        delta == attester_reward
+        for i, delta in enumerate(some_deltas)
+        if i in some_validators
+    )
+    assert all(
+        delta == 0
+        for i, delta in enumerate(some_deltas)
+        if i not in some_validators
+    )
+
+
+def test_recent_proposer_processing(genesis_crystallized_state):
+    zero_deltas = process_recent_proposers(genesis_crystallized_state, [])
+    assert len(zero_deltas) == genesis_crystallized_state.num_active_validators
+    assert all(delta == 0 for delta in zero_deltas)
+
+    some_proposers = [RecentProposerRecord(index=index, balance_delta=delta) for index, delta in [
+        (0, 100),
+        (5, 200),
+        (39, 300),
+    ]]
+    some_indices = [some_proposer.index for some_proposer in some_proposers]
+    some_deltas = process_recent_proposers(genesis_crystallized_state, some_proposers)
+    assert all(delta == 0 for index, delta in enumerate(some_deltas) if index not in some_indices)
+    assert some_deltas[0] == 100
+    assert some_deltas[5] == 200
+    assert some_deltas[39] == 300
