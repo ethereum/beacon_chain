@@ -1,9 +1,25 @@
+import pytest
+
 from beacon_chain.state.state_transition import (
+    get_shuffling,
+    process_ffg_deposits,
     process_recent_attesters,
     process_recent_proposers,
 )
+
+from beacon_chain.state.crystallized_state import (
+    CrystallizedState,
+)
+from beacon_chain.state.validator_record import (
+    ValidatorRecord,
+)
 from beacon_chain.state.recent_proposer_record import (
     RecentProposerRecord,
+)
+
+from beacon_chain.utils.bitfield import (
+    get_empty_bitfield,
+    set_voted,
 )
 
 
@@ -173,3 +189,94 @@ def test_recent_proposer_processing(genesis_crystallized_state):
     assert some_deltas[0] == 100
     assert some_deltas[5] == 200
     assert some_deltas[39] == 300
+
+
+@pytest.mark.parametrize("balances, votes, justifying", [
+    ([1, 1, 1], [True, True, True], True),
+    ([1, 1, 1], [True, True, False], True),
+    ([1, 1, 1], [True, False, True], True),
+    ([1, 1, 1], [False, True, True], True),
+    ([1, 1, 1], [True, False, False], False),
+    ([1, 1, 1], [False, True, False], False),
+    ([1, 1, 1], [False, False, True], False),
+    ([1, 1, 1], [False, False, False], False),
+
+    ([4, 1, 1], [True, False, False], True),
+    ([4, 1, 1], [False, True, False], False),
+    ([4, 1, 1], [False, False, True], False),
+])
+def test_ffg_vote_counting(balances, votes, justifying):
+    validators = [ValidatorRecord(
+        pubkey=0,
+        withdrawal_shard=0,
+        withdrawal_address=b'\x00' * 32,
+        randao_commitment=b'\x55' * 32,
+        balance=balance,
+        switch_dynasty=1000
+    ) for balance in balances]
+    total_deposits = sum(balances)
+
+    # first epoch
+    crystallized_state1 = CrystallizedState(
+        active_validators=validators,
+        current_epoch=1,
+        last_justified_epoch=0,
+        last_finalized_epoch=0,
+        total_deposits=total_deposits,
+        current_shuffling=get_shuffling(b'', len(validators)),
+    )
+
+    bitfield = get_empty_bitfield(len(validators))
+    for i, vote in enumerate(votes):
+        if vote:
+            bitfield = set_voted(bitfield, i)
+
+    (
+        _,
+        total_vote_count,
+        total_vote_deposit,
+        justify,
+        finalize
+    ) = process_ffg_deposits(crystallized_state1, bitfield)
+    assert total_vote_count == sum(int(vote) for vote in votes)
+    assert total_vote_deposit == sum(balance for balance, vote in zip(balances, votes) if vote)
+    assert justify == justifying
+    assert finalize == justifying  # genesis is justified
+
+    # epoch following unjustified epoch
+    crystallized_state2 = CrystallizedState(
+        active_validators=validators,
+        current_epoch=2,
+        last_justified_epoch=0,
+        last_finalized_epoch=0,
+        total_deposits=total_deposits,
+        current_shuffling=get_shuffling(b'', len(validators)),
+    )
+    (
+        _,
+        total_vote_count,
+        total_vote_deposit,
+        justify,
+        finalize
+    ) = process_ffg_deposits(crystallized_state2, bitfield)
+    assert justify == justifying
+    assert not finalize
+
+    # epoch following justified epoch
+    crystallized_state3 = CrystallizedState(
+        active_validators=validators,
+        current_epoch=3,
+        last_justified_epoch=2,
+        last_finalized_epoch=0,
+        total_deposits=total_deposits,
+        current_shuffling=get_shuffling(b'', len(validators)),
+    )
+    (
+        _,
+        total_vote_count,
+        total_vote_deposit,
+        justify,
+        finalize
+    ) = process_ffg_deposits(crystallized_state3, bitfield)
+    assert justify == justifying
+    assert finalize == justifying
