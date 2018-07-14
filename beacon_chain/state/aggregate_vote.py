@@ -17,7 +17,3 @@ class AggregateVote():
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
-
-    @property
-    def num_aggregate_sig(self):
-        return len(self.aggregate_sig)

@@ -52,11 +52,7 @@ def test_block_hash():
 def test_num_properties():
     aggregate_vote = AggregateVote()
     block = Block(
-        attestation_aggregate_sig=list(range(2)),
         shard_aggregate_votes=[aggregate_vote],
-        sig=list(range(3)),
     )
 
-    assert block.num_attestation_aggregate_sig == 2
     assert block.num_shard_aggregate_votes == 1
-    assert block.num_sig == 3
