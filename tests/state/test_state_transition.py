@@ -191,20 +191,35 @@ def test_recent_proposer_processing(genesis_crystallized_state):
     assert some_deltas[39] == 300
 
 
-@pytest.mark.parametrize("balances, votes, justifying", [
-    ([1, 1, 1], [True, True, True], True),
-    ([1, 1, 1], [True, True, False], True),
-    ([1, 1, 1], [True, False, True], True),
-    ([1, 1, 1], [False, True, True], True),
-    ([1, 1, 1], [True, False, False], False),
-    ([1, 1, 1], [False, True, False], False),
-    ([1, 1, 1], [False, False, True], False),
-    ([1, 1, 1], [False, False, False], False),
+@pytest.mark.parametrize(
+    "balances, votes, justifying",
+    [
+        ([1, 1, 1], [True, True, True], True),
+        ([1, 1, 1], [True, True, False], True),
+        ([1, 1, 1], [True, False, True], True),
+        ([1, 1, 1], [False, True, True], True),
+        ([1, 1, 1], [True, False, False], False),
+        ([1, 1, 1], [False, True, False], False),
+        ([1, 1, 1], [False, False, True], False),
+        ([1, 1, 1], [False, False, False], False),
 
-    ([4, 1, 1], [True, False, False], True),
-    ([4, 1, 1], [False, True, False], False),
-    ([4, 1, 1], [False, False, True], False),
-])
+        ([4, 1, 1], [True, False, False], True),
+        ([4, 1, 1], [False, True, False], False),
+        ([4, 1, 1], [False, False, True], False),
+
+        ([1, 1, 1, 1], [True, True, True, False], True),
+        ([2, 1, 1, 1], [True, True, False, False], False),
+        ([2, 2, 1, 1], [True, True, False, False], True),
+        ([2, 2, 1, 1], [False, True, True, True], True),
+        ([2, 2, 1, 1], [False, True, True, False], False),
+
+        ([4, 3, 2, 2, 1], [True, True, False, False, True], True),
+        ([4, 3, 2, 2, 1], [True, True, False, False, False], False),
+        ([4, 3, 2, 2, 1], [False, False, True, True, True], False),
+        ([4, 3, 2, 2, 1], [False, True, True, True, True], True),
+        ([4, 3, 2, 2, 1], [False, True, True, True, False], False),
+    ]
+)
 def test_ffg_vote_counting(balances, votes, justifying):
     validators = [ValidatorRecord(
         pubkey=0,
