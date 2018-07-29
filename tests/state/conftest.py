@@ -71,12 +71,8 @@ def bls_sign_mock(m, k):
 
 
 @pytest.fixture(autouse=True)
-def mock_bls_verify(mocker):
+def mock_bls(mocker):
     mocker.patch('beacon_chain.utils.bls.verify', side_effect=bls_verify_mock)
-
-
-@pytest.fixture(autouse=True)
-def mock_bls_sign(mocker):
     mocker.patch('beacon_chain.utils.bls.sign', side_effect=bls_sign_mock)
 
 
@@ -370,6 +366,3 @@ def mock_make_child(keymap, make_unfinished_block, config):
 
         return block, new_crystallized_state, new_active_state
     return mock_make_child
-
-
-
