@@ -79,13 +79,28 @@ def mock_bls(mocker):
 @pytest.fixture
 def sample_active_state_params():
     return {
-        'height': 30,
-        'randao': b'\x35'*32,
-        'ffg_voter_bitfield': b'\x42\x60',
-        'recent_attesters': [0, 2, 10],
-        'partial_crosslinks': [],
-        'total_skip_count': 33,
-        'recent_proposers': []
+        'total_attester_deposits': 30,
+        'attester_bitfield': b'\x42\x60',
+    }
+
+
+@pytest.fixture
+def sample_crystallized_state_params():
+    return {
+        'active_validators': [],
+        'queued_validators': [],
+        'exited_validators': [],
+        'current_epoch': 10,
+        'current_shuffling': [],
+        'last_justified_epoch': 7,
+        'last_finalized_epoch': 6,
+        'current_dynasty': 4,
+        'next_shard': 2,
+        'current_checkpoint': b'\x43'*32,
+        'crosslink_records': [],
+        'total_deposits': 10000,
+        'dynasty_seed': b'\x55'*32,
+        'dynasty_seed_last_reset': 6,
     }
 
 
@@ -95,6 +110,14 @@ def sample_recent_proposer_record_params():
         'index': 10,
         'randao_commitment': b'\x43'*32,
         'balance_delta': 3
+    }
+
+
+@pytest.fixture
+def sample_crosslink_record_params():
+    return {
+        'epoch': 0,
+        'hash': b'\x43'*32,
     }
 
 

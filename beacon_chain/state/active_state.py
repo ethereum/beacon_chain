@@ -1,44 +1,18 @@
-from .partial_crosslink_record import PartialCrosslinkRecord
-from .recent_proposer_record import RecentProposerRecord
-
 
 class ActiveState():
 
     fields = {
-        # Block height
-        'height': 'int64',
-        # Global RANDAO beacon state
-        'randao': 'hash32',
-        # Which validators have made FFG votes this epoch (as a bitfield)
-        'ffg_voter_bitfield': 'bytes',
-        # Block attesters in the last epoch
-        'recent_attesters': ['int24'],
-        # Storing data about crosslinks-in-progress attempted in this epoch
-        'partial_crosslinks': [PartialCrosslinkRecord],
-        # Total number of skips (used to determine minimum timestamp)
-        'total_skip_count': 'int64',
-        # Block proposers in the last epoch
-        'recent_proposers': [RecentProposerRecord]
+        # Total quantity of wei that attested for the most recent checkpoint
+        'total_attester_deposits': 'int64',
+        # Who attested
+        'attester_bitfield': 'bytes',
     }
     defaults = {
-        'height': 0,
-        'randao': b'\x00'*32,
-        'ffg_voter_bitfield': b'',
-        'recent_attesters': [],
-        'partial_crosslinks': [],
-        'total_skip_count': 0,
-        'recent_proposers': []
+        'total_attester_deposits': 0,
+        'attester_bitfield': b'',
     }
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
-
-    @property
-    def num_recent_attesters(self):
-        return len(self.recent_attesters)
-
-    @property
-    def num_recent_proposers(self):
-        return len(self.recent_proposers)
