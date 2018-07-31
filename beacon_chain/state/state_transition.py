@@ -40,16 +40,14 @@ def state_hash(crystallized_state, active_state):
     return blake(serialize(crystallized_state)) + blake(serialize(active_state))
 
 
-def get_shuffling(seed, validator_count, sample=None, config=DEFAULT_CONFIG):
-    max_validators = config['max_validators']
-    assert validator_count <= max_validators
+def get_shuffling(seed, validator_count, config=DEFAULT_CONFIG):
+    assert validator_count <= 2**24
 
-    rand_max = max_validators - max_validators % validator_count
+    rand_max = 2**24 - 2**24 % validator_count
     o = list(range(validator_count))
     source = seed
     i = 0
-    maxvalue = sample if sample is not None else validator_count
-    while i < maxvalue:
+    while i < validator_count:
         source = blake(source)
         for pos in range(0, 30, 3):
             m = int.from_bytes(source[pos:pos+3], 'big')
@@ -60,7 +58,7 @@ def get_shuffling(seed, validator_count, sample=None, config=DEFAULT_CONFIG):
                 replacement_pos = (m % remaining) + i
                 o[i], o[replacement_pos] = o[replacement_pos], o[i]
                 i += 1
-    return o[:maxvalue]
+    return o
 
 
 def get_crosslink_aggvote_msg(shard_id, shard_block_hash, crystallized_state):
@@ -451,7 +449,7 @@ def _compute_new_active_state(crystallized_state,
     )
 
 
-def compute_state_transition(parent_state,
+def old_compute_state_transition(parent_state,
                              parent_block,
                              block,
                              verify_sig=True,
@@ -476,3 +474,25 @@ def compute_state_transition(parent_state,
     )
 
     return crystallized_state, active_state
+
+
+def compute_state_transition(parent_state,
+                             block,
+                             config=DEFAULT_CONFIG):
+    crystallized_state, active_state = parent_state
+
+    active_state = _process_attestations(
+        crystallized_state,
+        active_state,
+        block
+    )
+
+    # Initialize a new epoch if needed
+    if active_state.height % config['epoch_length'] == 0:
+        crystallized_state, active_state = _initialize_new_epoch(
+            crystallized_state,
+            active_state,
+            config
+        )
+
+

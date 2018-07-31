@@ -4,12 +4,18 @@ from beacon_chain.state.helpers import (
     get_crosslink_shards,
     get_crosslink_notaries,
     get_crosslink_shards_count,
+    get_cutoffs,
 )
 
 from tests.state.helpers import (
     mock_crystallized_state,
     mock_validator_record,
 )
+
+
+def test_get_cutoffs():
+    get_cutoffs(10)
+
 
 @pytest.mark.parametrize(
     'active_validators_count, shard_count, notaries_per_crosslink, expected',

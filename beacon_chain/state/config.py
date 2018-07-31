@@ -1,31 +1,29 @@
-ATTESTER_COUNT = 32
-ATTESTER_REWARD = 1
-EPOCH_LENGTH = 5
-SHARD_COUNT = 20
-DEFAULT_BALANCE = 32000
-DEFAULT_SWITCH_DYNASTY = 9999999999999999999
-MAX_VALIDATORS = 2**24
-NOTARIES_PER_CROSSLINK = 100
+# DEFAULT_SWITCH_DYNASTY = 9999999999999999999
+DEPOSIT_SIZE = 32  # ETH
+END_EPOCH_GRACE_PERIOD = 8  # blocks
+EPOCH_LENGTH = 64  # slots
+MAX_VALIDATOR_COUNT = 2**22  # validators
+MIN_COMMITTEE_SIZE = 128  # validators
+SHARD_COUNT = 1024  # shards
+SLOT_DURATION = 8  # seconds
 
 
 def generate_config(*,
-                    attester_count=ATTESTER_COUNT,
-                    attester_reward=ATTESTER_REWARD,
+                    deposit_size=DEPOSIT_SIZE,
+                    end_epoch_grace_period=END_EPOCH_GRACE_PERIOD,
                     epoch_length=EPOCH_LENGTH,
+                    max_validator_count=MAX_VALIDATOR_COUNT,
+                    min_committee_size=MIN_COMMITTEE_SIZE,
                     shard_count=SHARD_COUNT,
-                    default_balance=DEFAULT_BALANCE,
-                    max_validators=MAX_VALIDATORS,
-                    default_switch_dynasty=DEFAULT_SWITCH_DYNASTY,
-                    notaries_per_crosslink=NOTARIES_PER_CROSSLINK):
+                    slot_duration=SLOT_DURATION):
     return {
-        'attester_count': attester_count,
-        'attester_reward': attester_reward,
+        'deposit_size': deposit_size,
+        'end_epoch_grace_period': end_epoch_grace_period,
         'epoch_length': epoch_length,
+        'max_validator_count': max_validator_count,
+        'min_committee_size': min_committee_size,
         'shard_count': shard_count,
-        'default_balance': default_balance,
-        'max_validators': max_validators,
-        'default_switch_dynasty': default_switch_dynasty,
-        'notaries_per_crosslink': notaries_per_crosslink,
+        'slot_duration': slot_duration
     }
 
 

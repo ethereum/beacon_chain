@@ -79,6 +79,7 @@ def mock_bls(mocker):
 @pytest.fixture
 def sample_active_state_params():
     return {
+        'attestations': [],
         'total_attester_deposits': 30,
         'attester_bitfield': b'\x42\x60',
     }
