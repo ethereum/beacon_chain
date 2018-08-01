@@ -18,13 +18,16 @@ from .helpers import (
     get_shuffling,
 )
 
+import beacon_chain.utils.bls as bls
 from beacon_chain.utils.blake import (
     blake,
 )
 from beacon_chain.utils.bitfields import (
+    get_bitfield_length,
     get_empty_bitfield,
     has_voted,
     or_bitfields,
+    set_voted,
 )
 from beacon_chain.utils.simpleserialize import (
     deepcopy,
@@ -77,7 +80,7 @@ def validate_attestation(crystallized_state,
 
         start = shard_cutoffs[si]
         end = shard_cutoffs[si + 1]
-    # in grace period
+    # in grace period, no shard to attest to
     else:
         if not (attestation.shard_id == 65535 and attestation.shard_block_hash == "\x00"*32):
             return False
@@ -87,18 +90,33 @@ def validate_attestation(crystallized_state,
     #
     # validate bitfield
     #
-    if not (len(attestation.attester_bitfield) == ceil_div8(end - start)):
+    if not (len(attestation.attester_bitfield) == get_bitfield_length(end - start)):
         return False
-    # check if end bits are zero
 
+    # check if end bits are zero
+    last_bit = end - start
+    if last_bit % 8 != 0:
+        for i in range(8 - last_bit % 8):
+            if has_voted(attestation.attester_bitfield, last_bit + i):
+                return False
 
     #
     # validate aggregate_sig
     #
-    # pub_key = generate_group_public_key()
-    # message = hash(in_epoch_slot_height + attestation.parent_hash + attestation.checkpoint_hash + attestation.shard_id + attestation.shard_block_hash)
-    # if not bls_verify(pub_key, message):
-    #     return False
+    pub_keys = [
+        crystallized_state.active_validators[crystallized_state.current_shuffling[start+i]]
+        for i in range(end - start)
+        if has_voted(attestation.attester_bitfield, i)
+    ]
+    message = blake(
+        in_epoch_slot_height +
+        attestation.parent_hash +
+        attestation.checkpoint_hash +
+        attestation.shard_id +
+        attestation.shard_block_hash
+    )
+    if not bls.verify(message, bls.aggregate_pubs(pub_keys), attestation.aggregate_sig):
+        return False
 
     return True
 
@@ -119,10 +137,26 @@ def _process_attestations(crystallized_state,
                                     height_cutoffs,
                                     shard_cutoffs,
                                     config)
-        # for index in range(end - start)
-        #     if not has_voted(attestation.attester_bitfield, index):
-        #         new_attester_deposits += crystallized_state.current_shuffling[start+index]
-        #         new_attester_bitfield = set_voted(new_attester_bitfield, index)
+        in_epoch_slot_height = attestation.slot % config['epoch_length']
+
+        # find start and end of validators in current shuffling
+        if in_epoch_slot_height < config['epoch_length'] - config['end_epoch_grace_period']:
+            si = (attestation.shard_id - crystallized_state.next_shard) % config['shard_count']
+            start = shard_cutoffs[si]
+            end = shard_cutoffs[si + 1]
+        else:
+            start = height_cutoffs[in_epoch_slot_height]
+            end = height_cutoffs[in_epoch_slot_height]
+
+        # mark that each validator has voted in new active state attester bitfield
+        # and track total deposits voted
+        for index in range(end - start):
+            if not has_voted(new_attester_bitfield, index):
+                validator = crystallized_state.active_validators[
+                    crystallized_state.current_shuffling[start + index]
+                ]
+                new_attester_deposits += validator.balance
+                new_attester_bitfield = set_voted(new_attester_bitfield, start + index)
 
     new_attestations = (
         active_state.attestations +
@@ -151,7 +185,10 @@ def _initialize_new_epoch(crystallized_state,
     # Justify and Finalize
     #
     justify = active_state.total_attester_deposits * 3 >= crystallized_state.total_deposits * 2
-    finalize = justify and crystallized_state.last_justified_epoch == crystallized_state.current_epoch - 1
+    finalize = (
+        justify and
+        crystallized_state.last_justified_epoch == crystallized_state.current_epoch - 1
+    )
     if justify:
         last_justified_epoch = crystallized_state.current_epoch
     else:
@@ -171,9 +208,11 @@ def _initialize_new_epoch(crystallized_state,
         config
     )
 
-    for i, validator in enumerate(new_active_validators):
-        # this index might be off. should probably be based on shuffling
-        if has_voted(attester_bitfield, i):
+    for index in range(crystallized_state.num_active_validators):
+        validator = new_active_validators[
+            crystallized_state.current_shuffling[index]
+        ]
+        if has_voted(attester_bitfield, index):
             validator.balance += online_reward
         else:
             validator.balance -= offline_penalty
@@ -184,7 +223,7 @@ def _initialize_new_epoch(crystallized_state,
     new_crosslink_records = [crosslink for crosslink in crystallized_state.crosslink_records]
     for shard_id in range(config['shard_count']):
         attestations = filter(lambda a: a.shard_id == shard_id, active_state.attestations)
-        roots = map(lambda a: a.shard_block_hash, attestations)
+        roots = set(map(lambda a: a.shard_block_hash, attestations))
         start = shard_cutoffs[shard_id]
         end = shard_cutoffs[shard_id + 1]
         root_attester_bitfields = {}
@@ -202,7 +241,7 @@ def _initialize_new_epoch(crystallized_state,
             for i in range(end - start):
                 if has_voted(root_attester_bitfields[root], i):
                     validator_index = crystallized_state.current_shuffling[start + i]
-                    balance = crystallized_state.active_validators[validator_index]
+                    balance = crystallized_state.active_validators[validator_index].balance
                     root_total_balance[root] += balance
 
             if root_total_balance[root] > best_root_deposit_size:
@@ -211,7 +250,8 @@ def _initialize_new_epoch(crystallized_state,
 
         has_adequate_deposit = best_root_deposit_size * 3 >= crystallized_state.total_deposits * 2
         needs_new_crosslink = (
-            crystallized_state.crosslink_records[shard_id].epoch < crystallized_state.last_finalized_epoch
+            crystallized_state.crosslink_records[shard_id].epoch <
+            crystallized_state.last_finalized_epoch
         )
         if has_adequate_deposit and needs_new_crosslink:
             new_crosslink_records[shard_id] = CrosslinkRecord(
@@ -301,9 +341,7 @@ def compute_state_transition(parent_state,
     )
 
     # Initialize a new epoch if needed
-    # this needs to be more flexible to account for a slot number being built across
-    # the epoch boundary
-    if block.slot_number % config['epoch_length'] == 0:
+    if block.slot_number // config['epoch_length'] > crystallized_state.current_epoch:
         crystallized_state, active_state = _initialize_new_epoch(
             crystallized_state,
             active_state,

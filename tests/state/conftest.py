@@ -86,6 +86,19 @@ def sample_active_state_params():
 
 
 @pytest.fixture
+def sample_attestation_record_params():
+    return {
+        'slot': 10,
+        'parent_hash': b'\x34'*32,
+        'checkpoint_hash': b'\x42'*32,
+        'shard_id': 12,
+        'shard_block_hash': b'\x20'*32,
+        'attester_bitfield': b'\x33\x1F',
+        'aggregate_sig': [0, 0],
+    }
+
+
+@pytest.fixture
 def sample_crystallized_state_params():
     return {
         'active_validators': [],
