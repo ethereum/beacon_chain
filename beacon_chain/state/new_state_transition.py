@@ -22,7 +22,7 @@ import beacon_chain.utils.bls as bls
 from beacon_chain.utils.blake import (
     blake,
 )
-from beacon_chain.utils.bitfields import (
+from beacon_chain.utils.bitfield import (
     get_bitfield_length,
     get_empty_bitfield,
     has_voted,
@@ -62,9 +62,11 @@ def validate_attestation(crystallized_state,
     epoch_length = config['epoch_length']
 
     if not attestation.slot < block.slot_number:
+        print("Attestation slot number too high")
         return False
 
     if not attestation.checkpoint_hash == crystallized_state.current_checkpoint:
+        print("Attestation has wrong checkpoint hash")
         return False
 
     #
@@ -76,6 +78,7 @@ def validate_attestation(crystallized_state,
 
         if not (height_cutoffs[in_epoch_slot_height] <= shard_cutoffs[si] and
                 shard_cutoffs[si] < height_cutoffs[in_epoch_slot_height + 1]):
+            print("Attestation is not in correct height_cutoffs")
             return False
 
         start = shard_cutoffs[si]
@@ -83,6 +86,7 @@ def validate_attestation(crystallized_state,
     # in grace period, no shard to attest to
     else:
         if not (attestation.shard_id == 65535 and attestation.shard_block_hash == "\x00"*32):
+            print("Attestion is in grace period but has wrong id/blockhash")
             return False
         start = height_cutoffs[in_epoch_slot_height]
         end = height_cutoffs[in_epoch_slot_height]
@@ -91,6 +95,10 @@ def validate_attestation(crystallized_state,
     # validate bitfield
     #
     if not (len(attestation.attester_bitfield) == get_bitfield_length(end - start)):
+        print(
+            "Attestation has incorrect bitfield length. Found: %s, Expected: %s" %
+            (len(attestation.attester_bitfield), get_bitfield_length(end - start))
+        )
         return False
 
     # check if end bits are zero
@@ -98,24 +106,26 @@ def validate_attestation(crystallized_state,
     if last_bit % 8 != 0:
         for i in range(8 - last_bit % 8):
             if has_voted(attestation.attester_bitfield, last_bit + i):
+                print("Attestation has non-zero trailing bits")
                 return False
 
     #
     # validate aggregate_sig
     #
     pub_keys = [
-        crystallized_state.active_validators[crystallized_state.current_shuffling[start+i]]
+        crystallized_state.active_validators[crystallized_state.current_shuffling[start+i]].pubkey
         for i in range(end - start)
         if has_voted(attestation.attester_bitfield, i)
     ]
     message = blake(
-        in_epoch_slot_height +
+        in_epoch_slot_height.to_bytes(8, byteorder='big') +
         attestation.parent_hash +
         attestation.checkpoint_hash +
-        attestation.shard_id +
+        attestation.shard_id.to_bytes(2, byteorder='big') +
         attestation.shard_block_hash
     )
     if not bls.verify(message, bls.aggregate_pubs(pub_keys), attestation.aggregate_sig):
+        print("Attestation aggregate signature fails")
         return False
 
     return True
@@ -329,7 +339,7 @@ def compute_state_transition(parent_state,
 
     assert validate_block(block)
 
-    height_cutoffs, shard_cutoffs = get_cutoffs(crystallized_state.num_active_validators)
+    height_cutoffs, shard_cutoffs = get_cutoffs(crystallized_state.num_active_validators, config)
 
     active_state = _process_attestations(
         crystallized_state,
@@ -350,3 +360,5 @@ def compute_state_transition(parent_state,
             shard_cutoffs,
             config
         )
+
+    return crystallized_state, active_state

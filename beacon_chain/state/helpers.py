@@ -1,6 +1,31 @@
+from beacon_chain.utils.blake import (
+    blake,
+)
 from beacon_chain.state.config import (
     DEFAULT_CONFIG,
 )
+
+
+def get_si_for_height(height_cutoffs,
+                      shard_cutoffs,
+                      in_epoch_slot_height,
+                      config=DEFAULT_CONFIG):
+    return [
+        si
+        for si in range(len(shard_cutoffs) - 1)  # don't use last shard_cutoff. is just upper range
+        if height_cutoffs[in_epoch_slot_height] <= shard_cutoffs[si] and
+        shard_cutoffs[si] < height_cutoffs[in_epoch_slot_height + 1]
+    ]
+
+
+def get_attestation_height(height_cutoffs, shard_cutoffs, si):
+    last = 0
+    for i in range(len(height_cutoffs)):
+        if height_cutoffs[i] <= shard_cutoffs[si] and shard_cutoffs[si] < height_cutoffs[i + 1]:
+            last = i
+        if height_cutoffs[i] > shard_cutoffs[si]:
+            break
+    return last
 
 
 def get_shuffling(seed, validator_count, config=DEFAULT_CONFIG):

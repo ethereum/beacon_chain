@@ -1,4 +1,4 @@
-# DEFAULT_SWITCH_DYNASTY = 9999999999999999999
+DEFAULT_SWITCH_DYNASTY = 9999999999999999999
 DEPOSIT_SIZE = 32  # ETH
 END_EPOCH_GRACE_PERIOD = 8  # blocks
 EPOCH_LENGTH = 64  # slots
@@ -9,6 +9,7 @@ SLOT_DURATION = 8  # seconds
 
 
 def generate_config(*,
+                    default_switch_dynasty=DEFAULT_SWITCH_DYNASTY,
                     deposit_size=DEPOSIT_SIZE,
                     end_epoch_grace_period=END_EPOCH_GRACE_PERIOD,
                     epoch_length=EPOCH_LENGTH,
@@ -17,6 +18,7 @@ def generate_config(*,
                     shard_count=SHARD_COUNT,
                     slot_duration=SLOT_DURATION):
     return {
+        'default_switch_dynasty': default_switch_dynasty,
         'deposit_size': deposit_size,
         'end_epoch_grace_period': end_epoch_grace_period,
         'epoch_length': epoch_length,
