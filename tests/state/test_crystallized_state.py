@@ -15,15 +15,14 @@ from tests.state.helpers import (
 @pytest.mark.parametrize(
     'param,default_value',
     [
-        ('active_validators', []),
-        ('queued_validators', []),
-        ('exited_validators', []),
-        ('current_epoch', 0),
-        ('current_shuffling', []),
-        ('last_justified_epoch', 0),
-        ('last_finalized_epoch', 0),
+        ('validators', []),
+        ('epoch_number', 0),
+        ('indices_for_heights', []),
+        ('last_justified_slot', 0),
+        ('justified_streak', 0),
+        ('last_finalized_slot', 0),
         ('current_dynasty', 0),
-        ('next_shard', 0),
+        ('crosslinking_start_shard', 0),
         ('current_checkpoint', b'\x00'*32),
         ('crosslink_records', []),
         ('total_deposits', 0),
@@ -41,37 +40,13 @@ def test_defaults(param, default_value, sample_crystallized_state_params):
 @pytest.mark.parametrize(
     'expected', [(0), (1), (5)]
 )
-def test_num_active_validators(expected):
+def test_num_validators(expected):
     validators = [mock_validator_record(pubkey) for pubkey in range(expected)]
     crystallized_state = CrystallizedState(
-        active_validators=validators,
+        validators=validators,
     )
 
-    assert crystallized_state.num_active_validators == expected
-
-
-@pytest.mark.parametrize(
-    'expected', [(0), (1), (5)]
-)
-def test_num_queued_validators(expected):
-    validators = [mock_validator_record(pubkey) for pubkey in range(expected)]
-    crystallized_state = CrystallizedState(
-        queued_validators=validators,
-    )
-
-    assert crystallized_state.num_queued_validators == expected
-
-
-@pytest.mark.parametrize(
-    'expected', [(0), (1), (5)]
-)
-def test_num_exited_validators(expected):
-    validators = [mock_validator_record(pubkey) for pubkey in range(expected)]
-    crystallized_state = CrystallizedState(
-        exited_validators=validators,
-    )
-
-    assert crystallized_state.num_exited_validators == expected
+    assert crystallized_state.num_validators == expected
 
 
 @pytest.mark.parametrize(

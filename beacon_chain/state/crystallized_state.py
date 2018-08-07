@@ -1,29 +1,27 @@
 from .crosslink_record import CrosslinkRecord
+from .shard_and_indices import ShardAndIndices
 from .validator_record import ValidatorRecord
 
 
 class CrystallizedState():
     fields = {
-        # List of active validators
-        'active_validators': [ValidatorRecord],
-        # List of joined but not yet inducted validators
-        'queued_validators': [ValidatorRecord],
-        # List of removed validators pending withdrawal
-        'exited_validators': [ValidatorRecord],
-        # The current epoch
-        'current_epoch': 'int64',
-        # The permutation of the validators that
-        # determines who participates in what
-        # committee and at what height
-        'current_shuffling': ['int24'],
-        # The last justified epoch
-        'last_justified_epoch': 'int64',
-        # The last finalized epoch
-        'last_finalized_epoch': 'int64',
+        # List of validators
+        'validators': [ValidatorRecord],
+        # Epoch number
+        'epoch_number': 'int64',
+        # What active validators are part of the attester set
+        # at what height, and in what shard
+        'indices_for_heights': [[ShardAndIndices]],
+        # The last justified slot
+        'last_justified_slot': 'int64',
+        # Number of consecutive justified slots ending at this one
+        'justified_streak': 'int16',
+        # The last finalized slot
+        'last_finalized_slot': 'int64',
         # The current dynasty
         'current_dynasty': 'int64',
         # The next shard that crosslinking assignment will start from
-        'next_shard': 'int16',
+        'crosslinking_start_shard': 'int16',
         # The current FFG checkpoint
         'current_checkpoint': 'hash32',
         # Records about the most recent crosslink for each shard
@@ -36,15 +34,14 @@ class CrystallizedState():
         'dynasty_seed_last_reset': 'int64',
     }
     defaults = {
-        'active_validators': [],
-        'queued_validators': [],
-        'exited_validators': [],
-        'current_epoch': 0,
-        'current_shuffling': [],
-        'last_justified_epoch': 0,
-        'last_finalized_epoch': 0,
+        'validators': [],
+        'epoch_number': 0,
+        'indices_for_heights': [],
+        'last_justified_slot': 0,
+        'justified_streak': 0,
+        'last_finalized_slot': 0,
         'current_dynasty': 0,
-        'next_shard': 0,
+        'crosslinking_start_shard': 0,
         'current_checkpoint': b'\x00'*32,
         'crosslink_records': [],
         'total_deposits': 0,
@@ -58,19 +55,11 @@ class CrystallizedState():
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
         # Check if num_active_validators == num_current_shuffling
-        assert self.num_active_validators == len(self.current_shuffling)
+        # assert self.num_validators == len(self.current_shuffling)
 
     @property
-    def num_active_validators(self):
-        return len(self.active_validators)
-
-    @property
-    def num_queued_validators(self):
-        return len(self.queued_validators)
-
-    @property
-    def num_exited_validators(self):
-        return len(self.exited_validators)
+    def num_validators(self):
+        return len(self.validators)
 
     @property
     def num_crosslink_records(self):

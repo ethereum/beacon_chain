@@ -31,13 +31,12 @@ def mock_crystallized_state(
     return crystallized_state
 
 
-def mock_validator_record(pubkey, config):
+def mock_validator_record(pubkey, config=DEFAULT_CONFIG):
     return ValidatorRecord(
         pubkey=pubkey,
         withdrawal_shard=0,
         withdrawal_address=pubkey.to_bytes(32, 'big')[-20:],
         randao_commitment=b'\x55'*32,
-        balance=config['default_balance'],
+        balance=config['deposit_size'],
         switch_dynasty=config['default_switch_dynasty']
     )
-

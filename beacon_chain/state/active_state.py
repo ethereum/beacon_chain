@@ -1,18 +1,17 @@
 from .attestation_record import AttestationRecord
 
+
 class ActiveState():
 
     fields = {
-        'attestations': [AttestationRecord],
-        # Total quantity of wei that attested for the most recent checkpoint
-        'total_attester_deposits': 'int64',
-        # Who attested
-        'attester_bitfield': 'bytes',
+        # Attestations that have not yet been processed
+        'pending_attestations': [AttestationRecord],
+        # Most recent 64 block hashes
+        'recent_block_hashes': ['hash32'],
     }
     defaults = {
-        'attestations': [],
-        'total_attester_deposits': 0,
-        'attester_bitfield': b'',
+        'pending_attestations': [],
+        'recent_block_hashes': [],
     }
 
     def __init__(self, **kwargs):
@@ -21,5 +20,5 @@ class ActiveState():
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
     @property
-    def num_attestations(self):
-        return len(self.attestations)
+    def num_pending_attestations(self):
+        return len(self.pending_attestations)

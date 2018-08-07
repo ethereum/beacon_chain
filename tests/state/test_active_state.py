@@ -12,9 +12,8 @@ from beacon_chain.state.attestation_record import (
 @pytest.mark.parametrize(
     'param,default_value',
     [
-        ('attestations', []),
-        ('total_attester_deposits', 0),
-        ('attester_bitfield', b''),
+        ('pending_attestations', []),
+        ('recent_block_hashes', []),
     ]
 )
 def test_defaults(param, default_value, sample_active_state_params):
@@ -27,10 +26,10 @@ def test_defaults(param, default_value, sample_active_state_params):
 @pytest.mark.parametrize(
     'expected', [(0), (1), (5)]
 )
-def test_num_attestations(expected):
+def test_num_pending_attestations(expected):
     attestations = [AttestationRecord() for i in range(expected)]
     active_state = ActiveState(
-        attestations=attestations,
+        pending_attestations=attestations,
     )
 
-    assert active_state.num_attestations == expected
+    assert active_state.num_pending_attestations == expected

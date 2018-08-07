@@ -11,9 +11,12 @@ class ValidatorRecord():
         'randao_commitment': 'hash32',
         # Current balance
         'balance': 'int64',
-        # Dynasty where the validator can (be inducted | be removed | withdraw)
-        'switch_dynasty': 'int64'
+        # Dynastyy where the validator is inducted
+        'start_dynasty': 'int64',
+        # Dynasty where the validator leaves
+        'end_dynasty': 'int64'
     }
+
     defaults = {}
 
     def __init__(self, **kwargs):

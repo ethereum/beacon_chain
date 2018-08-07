@@ -34,4 +34,3 @@ def or_bitfields(bitfields):
             byte = bitfield[i] | byte
         new += bytes([byte])
     return new
-

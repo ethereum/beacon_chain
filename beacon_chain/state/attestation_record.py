@@ -1,3 +1,5 @@
+from beacon_chain.utils.blake import blake
+
 
 class AttestationRecord():
     fields = {
