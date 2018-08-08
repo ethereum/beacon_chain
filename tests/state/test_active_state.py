@@ -33,3 +33,22 @@ def test_num_pending_attestations(expected):
     )
 
     assert active_state.num_pending_attestations == expected
+
+
+@pytest.mark.parametrize(
+    'block_vote_cache',
+    [
+        (None),
+        ({}),
+        ({'a': 'b'}),
+        ({1: 10, 10: 100})
+    ]
+)
+def test_block_vote_cache(block_vote_cache):
+    if block_vote_cache == None:
+        active_state = ActiveState()
+        assert active_state.block_vote_cache == {}
+        return
+
+    active_state = ActiveState(block_vote_cache=block_vote_cache)
+    assert active_state.block_vote_cache == block_vote_cache

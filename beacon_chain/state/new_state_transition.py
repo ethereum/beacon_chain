@@ -14,8 +14,7 @@ from .crystallized_state import (
     CrystallizedState,
 )
 from .helpers import (
-    get_cutoffs,
-    get_shuffling,
+    get_new_shuffling,
 )
 
 import beacon_chain.utils.bls as bls
@@ -53,56 +52,69 @@ def validate_block(block):
     return True
 
 
+def get_parent_hashes(active_state,
+                      block,
+                      attestation,
+                      config=DEFAULT_CONFIG):
+    # NOTE: This is spec'd incorrectly and will likely change pending review from  Vitalik
+    parent_hashes = (
+        attestation.oblique_parent_hashes +
+        active_state.recent_block_hashes[
+            block.slot_number - attestation.slot + len(attestation.oblique_parent_hashes):
+        ]
+    )
+    return parent_hashes
+
+
+def get_attestation_indices(crystallized_state,
+                            block,
+                            attestation,
+                            config=DEFAULT_CONFIG):
+    last_epoch_start = (crystallized_state.epoch_number - 1) * config['epoch_length']
+
+    shard_position = filter(
+        lambda x: crystallized_state.indices_for_heights[block.slot - last_epoch_start][x].shard_id == attestation.shard_id,
+        range(len(crystallized_state.indices_for_heights[block.slot - last_epoch_start]))
+    )[0]
+    attestation_indices = crystallized_state.indices_for_heights[block.slot - last_epoch_start][shard_position].shard_id
+
+    return attestation_indices
+
+
 def validate_attestation(crystallized_state,
+                         active_state,
                          attestation,
                          block,
-                         height_cutoffs,
-                         shard_cutoffs,
                          config=DEFAULT_CONFIG):
-    epoch_length = config['epoch_length']
-
     if not attestation.slot < block.slot_number:
         print("Attestation slot number too high")
         return False
 
-    if not attestation.checkpoint_hash == crystallized_state.current_checkpoint:
-        print("Attestation has wrong checkpoint hash")
-        return False
-
-    #
-    # check valid shard and find start/end of signers
-    #
-    in_epoch_slot_height = attestation.slot % epoch_length
-    if in_epoch_slot_height < epoch_length - config['end_epoch_grace_period']:
-        si = (attestation.shard_id - crystallized_state.next_shard) % config['shard_count']
-
-        if not (height_cutoffs[in_epoch_slot_height] <= shard_cutoffs[si] and
-                shard_cutoffs[si] < height_cutoffs[in_epoch_slot_height + 1]):
-            print("Attestation is not in correct height_cutoffs")
-            return False
-
-        start = shard_cutoffs[si]
-        end = shard_cutoffs[si + 1]
-    # in grace period, no shard to attest to
-    else:
-        if not (attestation.shard_id == 65535 and attestation.shard_block_hash == "\x00"*32):
-            print("Attestion is in grace period but has wrong id/blockhash")
-            return False
-        start = height_cutoffs[in_epoch_slot_height]
-        end = height_cutoffs[in_epoch_slot_height]
+    parent_hashes = get_parent_hashes(
+        active_state,
+        block,
+        attestation,
+        config
+    )
+    attestation_indices = get_attestation_indices(
+        crystallized_state,
+        block,
+        attestation,
+        config
+    )
 
     #
     # validate bitfield
     #
-    if not (len(attestation.attester_bitfield) == get_bitfield_length(end - start)):
+    if not (len(attestation.attester_bitfield) == get_bitfield_length(len(attestation_indices))):
         print(
             "Attestation has incorrect bitfield length. Found: %s, Expected: %s" %
-            (len(attestation.attester_bitfield), get_bitfield_length(end - start))
+            (len(attestation.attester_bitfield), get_bitfield_length(len(attestation_indices)))
         )
         return False
 
     # check if end bits are zero
-    last_bit = end - start
+    last_bit = len(attestation_indices)
     if last_bit % 8 != 0:
         for i in range(8 - last_bit % 8):
             if has_voted(attestation.attester_bitfield, last_bit + i):
@@ -112,15 +124,15 @@ def validate_attestation(crystallized_state,
     #
     # validate aggregate_sig
     #
+    in_epoch_slot_height = attestation.slot % config['epoch_length']
     pub_keys = [
-        crystallized_state.active_validators[crystallized_state.current_shuffling[start+i]].pubkey
-        for i in range(end - start)
+        crystallized_state.validators[i].pubkey
+        for i in attestation_indices
         if has_voted(attestation.attester_bitfield, i)
     ]
     message = blake(
         in_epoch_slot_height.to_bytes(8, byteorder='big') +
-        attestation.parent_hash +
-        attestation.checkpoint_hash +
+        parent_hashes +
         attestation.shard_id.to_bytes(2, byteorder='big') +
         attestation.shard_block_hash
     )
@@ -131,53 +143,70 @@ def validate_attestation(crystallized_state,
     return True
 
 
-def _process_attestations(crystallized_state,
-                          active_state,
-                          block,
-                          height_cutoffs,
-                          shard_cutoffs,
-                          config=DEFAULT_CONFIG):
+def _update_block_vote_cache(crystallized_state,
+                             active_state,
+                             attestation,
+                             block,
+                             block_vote_cache,
+                             config):
+    new_block_vote_cache = copy(block_vote_cache)
+    parent_hashes = get_parent_hashes(
+        active_state,
+        block,
+        attestation,
+        config
+    )
+    attestation_indices = get_attestation_indices(
+        crystallized_state,
+        block,
+        attestation,
+        config
+    )
 
-    new_attester_deposits = active_state.total_attester_deposits
-    new_attester_bitfield = copy(active_state.attester_bitfield)
+    for parent_hash in parent_hashes:
+        if parent_hash in attestation.oblique_parent_hashes:
+            continue
+        if parent_hash not in new_block_vote_cache:
+            new_block_vote_cache = {
+                'voter_indices': set(),
+                'total_voter_deposits': 0
+            }
+        for i in attestation_indices:
+            if i not in new_block_vote_cache['voter_indices']:
+                new_block_vote_cache['voter_indices'].add(i)
+                new_block_vote_cache['total_voter_deposits'] += crystallized_state.validators[i].balance
+
+    return new_block_vote_cache
+
+
+def _process_block(crystallized_state,
+                   active_state,
+                   block,
+                   config=DEFAULT_CONFIG):
+    new_block_vote_cache = copy(active_state.block_vote_cache)
     for attestation in block.attestations:
         assert validate_attestation(crystallized_state,
+                                    active_state,
                                     attestation,
                                     block,
-                                    height_cutoffs,
-                                    shard_cutoffs,
                                     config)
-        in_epoch_slot_height = attestation.slot % config['epoch_length']
+        new_block_vote_cache = _update_block_vote_cache(crystallized_state,
+                                                        active_state,
+                                                        attestation,
+                                                        block,
+                                                        new_block_vote_cache,
+                                                        config)
 
-        # find start and end of validators in current shuffling
-        if in_epoch_slot_height < config['epoch_length'] - config['end_epoch_grace_period']:
-            si = (attestation.shard_id - crystallized_state.next_shard) % config['shard_count']
-            start = shard_cutoffs[si]
-            end = shard_cutoffs[si + 1]
-        else:
-            start = height_cutoffs[in_epoch_slot_height]
-            end = height_cutoffs[in_epoch_slot_height]
-
-        # mark that each validator has voted in new active state attester bitfield
-        # and track total deposits voted
-        for index in range(end - start):
-            if not has_voted(new_attester_bitfield, index):
-                validator = crystallized_state.active_validators[
-                    crystallized_state.current_shuffling[start + index]
-                ]
-                new_attester_deposits += validator.balance
-                new_attester_bitfield = set_voted(new_attester_bitfield, start + index)
-
-    new_attestations = (
-        active_state.attestations +
-        sorted(block.attestations,
-               key=lambda attestation: attestation.shard_block_hash)
+    new_attestations = active_state.pending_attestations + block.attestations,
+    new_recent_block_hashes = (
+        active_state.recent_block_hashes[1:] +
+        [block.hash]
     )
 
     new_active_state = ActiveState(
-        attestations=new_attestations,
-        total_attester_deposits=new_attester_deposits,
-        attester_bitfield=new_attester_bitfield
+        pending_attestations=new_attestations,
+        recent_block_hashes=new_recent_block_hashes,
+        block_vote_cache=new_block_vote_cache
     )
     return new_active_state
 
@@ -185,8 +214,6 @@ def _process_attestations(crystallized_state,
 def _initialize_new_epoch(crystallized_state,
                           active_state,
                           block,
-                          height_cutoffs,
-                          shard_cutoffs,
                           config=DEFAULT_CONFIG):
     new_active_validators = deepcopy(crystallized_state.active_validators)
     attester_bitfield = active_state.attester_bitfield
@@ -332,6 +359,61 @@ def _initialize_new_epoch(crystallized_state,
     return new_crystallized_state, new_active_state
 
 
+def _initialize_new_epoch(crystallized_state,
+                          active_state,
+                          block,
+                          config=DEFAULT_CONFIG):
+    epoch_length = config['epoch_length']
+    epoch_number = crystallized_state.epoch_number
+    last_justified_slot = crystallized_state.last_justified_slot
+    last_finalized_slot = crystallized_state.last_finalized_slot
+    justified_streak = crystallized_state.justified_streak
+    for i in range(epoch_length):
+        slot = i + (epoch_number - 2) * epoch_length
+        block_hash = crystallized_state.recent_block_hashes[i]  # assuming we store EPOCH_LENGTH * 2 block hashes
+        if block_hash in active_state.block_vote_cache:
+            vote_balance = active_state.block_vote_cache[block_hash]['total_voter_deposits']
+        else:
+            vote_balance = 0
+
+        # need to make sure that `total_deposits` only accounts for active
+        if 3 * vote_balance >= 2 * crystallized_state.total_deposits:
+            last_justified_slot = max(last_justified_slot, slot)
+            justified_streak += 1
+        else:
+            justified_streak = 0
+
+        if justified_streak >= epoch_length + 1:
+            last_finalized_slot = max(last_finalized_slot, slot)
+
+    pending_attestations = [
+        a for a in active_state.pending_attestations
+        if a.slot >= (epoch_number - 1) * epoch_length
+    ]
+
+    indices_for_heights = crystallized_state.indices_for_heights[epoch_length:] + get_new_shuffling()  # STUB
+
+    new_crystallized_state = CrystallizedState(
+        validators=deepcopy(crystallized_state.validators),
+        epoch_number=epoch_number + 1,
+        indices_for_heights=indices_for_heights,
+        last_justified_slot=last_justified_slot,
+        justified_streak=justified_streak,
+        last_finalized_slot=last_finalized_slot,
+        current_dynasty=crystallized_state.current_dynasty
+    )
+
+    new_active_state = ActiveState(
+        pending_attestations=pending_attestations,
+        recent_block_hashes=deepcopy(active_state.recent_block_hashes),
+        # Should probably clean up block_vote_cache but old records won't break cache
+        # so okay for now
+        block_vote_cache=copy(active_state.block_vote_cache)
+    )
+
+    return new_crystallized_state, new_active_state
+
+
 def compute_state_transition(parent_state,
                              block,
                              config=DEFAULT_CONFIG):
@@ -339,26 +421,21 @@ def compute_state_transition(parent_state,
 
     assert validate_block(block)
 
-    height_cutoffs, shard_cutoffs = get_cutoffs(crystallized_state.num_active_validators, config)
-
-    active_state = _process_attestations(
-        crystallized_state,
-        active_state,
-        block,
-        height_cutoffs,
-        shard_cutoffs,
-        config
-    )
 
     # Initialize a new epoch if needed
-    if block.slot_number // config['epoch_length'] > crystallized_state.current_epoch:
+    if block.slot_number >= (crystallized_state.epoch_number + 1) * config['epoch_length']:
         crystallized_state, active_state = _initialize_new_epoch(
             crystallized_state,
             active_state,
             block,
-            height_cutoffs,
-            shard_cutoffs,
             config
         )
+
+    active_state = _process_block(
+        crystallized_state,
+        active_state,
+        block,
+        config
+    )
 
     return crystallized_state, active_state

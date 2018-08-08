@@ -90,9 +90,8 @@ def sample_active_state_params():
 def sample_attestation_record_params():
     return {
         'slot': 10,
-        'parent_hash': b'\x34'*32,
-        'checkpoint_hash': b'\x42'*32,
         'shard_id': 12,
+        'oblique_parent_hashes': [],
         'shard_block_hash': b'\x20'*32,
         'attester_bitfield': b'\x33\x1F',
         'aggregate_sig': [0, 0],

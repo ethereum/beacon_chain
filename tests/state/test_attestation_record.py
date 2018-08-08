@@ -9,9 +9,8 @@ from beacon_chain.state.attestation_record import (
     'param,default_value',
     [
         ('slot', 0),
-        ('parent_hash', b'\x00'*32),
-        ('checkpoint_hash', b'\x00'*32),
         ('shard_id', 0),
+        ('oblique_parent_hashes', []),
         ('shard_block_hash', b'\x00'*32),
         ('attester_bitfield', b''),
         ('aggregate_sig', [0, 0]),
