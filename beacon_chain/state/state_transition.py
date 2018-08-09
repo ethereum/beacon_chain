@@ -98,7 +98,7 @@ def validate_attestation(crystallized_state,
     if not (attestation.slot > block.slot_number - config['epoch_length']):
         print("Attestation slot number too low:")
         print(
-            "\tFound: %s, Needed greater than: %s" % 
+            "\tFound: %s, Needed greater than: %s" %
             (attestation.slot, block.slot_number - config['epoch_length'])
         )
         return False
