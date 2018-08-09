@@ -1,7 +1,7 @@
 import time
 import pytest
 
-from beacon_chain.state.new_state_transition import (
+from beacon_chain.state.state_transition import (
     compute_state_transition,
 )
 from beacon_chain.utils.simpleserialize import serialize
@@ -10,10 +10,10 @@ from beacon_chain.utils.simpleserialize import serialize
 @pytest.mark.parametrize(
     (
         'num_validators,max_validator_count,epoch_length,'
-        'end_epoch_grace_period,min_committee_size,shard_count'
+        'min_committee_size,shard_count'
     ),
     [
-        (1000, 1000, 20, 4, 10, 100),
+        (1000, 1000, 20, 10, 100),
     ],
 )
 def test_state_transition_integration(genesis_crystallized_state,
@@ -42,36 +42,32 @@ def test_state_transition_integration(genesis_crystallized_state,
     assert block2.crystallized_state_root == block.crystallized_state_root
     assert block2.active_state_root != b'\x00'*32
 
+    t = time.time()
+    assert compute_state_transition((c, a), block, block2, config=config)
+    print(
+        "Normal block with %s attestations of size %s processed in %.4f sec" %
+        (
+            len(attestations_of_genesis),
+            len(c.indices_for_heights[attestations_of_genesis[0].slot][0].committee),
+            (time.time() - t))
+        )
+    print('Verified a block!')
+
     attestations_of_2 = mock_make_attestations(
         (c2, a2),
         block2,
         attester_share=0.8
     )
 
+    epoch_transition_slot = (c2.epoch_number + 1) * config['epoch_length']
 
-    # t = time.time()
-    # assert compute_state_transition((c, a), block, block2, config=config)
-    # print("Normal block (basic attestation only) processed in %.4f sec" % (time.time() - t))
-    # print('Verified a block!')
-    # block3, c3, a3 = mock_make_child(
-        # (c2, a2),
-        # block2,
-        # 0,
-        # attester_share=0.8,
-        # crosslink_shards_and_shares=[(0, 0.75)],
-    # )
-    # print('Verified a block with a committee!')
-    # while a3.height % epoch_length > 0:
-        # block3, c3, a3 = mock_make_child(
-            # (c3, a3),
-            # block3,
-            # 0,
-            # attester_share=0.8,
-            # crosslink_shards_and_shares=[(a3.height, 0.6 + 0.02 * a3.height)],
-        # )
-        # print('Height: %d' % a3.height)
-    # print('FFG bitfield:', bin(int.from_bytes(a3.ffg_voter_bitfield, 'big')))
-    # block4, c4, a4 = mock_make_child((c3, a3), block3, 1, attester_share=0.55)
-    # t = time.time()
-    # assert compute_state_transition((c3, a3), block3, block4, config=config)
-    # print("Epoch transition processed in %.4f sec" % (time.time() - t))
+    block3, c3, a3 = mock_make_child(
+        (c2, a2),
+        block2,
+        epoch_transition_slot,
+        attestations_of_2
+    )
+
+    t = time.time()
+    assert compute_state_transition((c2, a2), block2, block3, config=config)
+    print("Epoch transition processed in %.4f sec" % (time.time() - t))

@@ -57,12 +57,16 @@ def get_parent_hashes(active_state,
                       block,
                       attestation,
                       config=DEFAULT_CONFIG):
-    # NOTE: This is spec'd incorrectly and will likely change pending review from Vitalik
+    epoch_length = config['epoch_length']
+    oblique_parent_hashes = attestation.oblique_parent_hashes
+
     parent_hashes = (
-        attestation.oblique_parent_hashes +
         active_state.recent_block_hashes[
-            block.slot_number - attestation.slot + len(attestation.oblique_parent_hashes):
-        ]
+            epoch_length + attestation.slot - block.slot_number:
+            epoch_length * 2 + attestation.slot - block.slot_number - len(oblique_parent_hashes)
+        ] +
+        oblique_parent_hashes
+
     )
     return parent_hashes
 
@@ -73,11 +77,11 @@ def get_attestation_indices(crystallized_state,
                             config=DEFAULT_CONFIG):
     last_epoch_start = (crystallized_state.epoch_number - 1) * config['epoch_length']
 
-    shard_position = filter(
-        lambda x: crystallized_state.indices_for_heights[block.slot - last_epoch_start][x].shard_id == attestation.shard_id,
-        range(len(crystallized_state.indices_for_heights[block.slot - last_epoch_start]))
-    )[0]
-    attestation_indices = crystallized_state.indices_for_heights[block.slot - last_epoch_start][shard_position].shard_id
+    shard_position = list(filter(
+        lambda x: crystallized_state.indices_for_heights[attestation.slot - last_epoch_start][x].shard_id == attestation.shard_id,
+        range(len(crystallized_state.indices_for_heights[attestation.slot - last_epoch_start]))
+    ))[0]
+    attestation_indices = crystallized_state.indices_for_heights[attestation.slot - last_epoch_start][shard_position].committee
 
     return attestation_indices
 
@@ -89,6 +93,14 @@ def validate_attestation(crystallized_state,
                          config=DEFAULT_CONFIG):
     if not attestation.slot < block.slot_number:
         print("Attestation slot number too high")
+        return False
+
+    if not (attestation.slot > block.slot_number - config['epoch_length']):
+        print("Attestation slot number too low:")
+        print(
+            "\tFound: %s, Needed greater than: %s" % 
+            (attestation.slot, block.slot_number - config['epoch_length'])
+        )
         return False
 
     parent_hashes = get_parent_hashes(
@@ -127,13 +139,13 @@ def validate_attestation(crystallized_state,
     #
     in_epoch_slot_height = attestation.slot % config['epoch_length']
     pub_keys = [
-        crystallized_state.validators[i].pubkey
-        for i in attestation_indices
+        crystallized_state.validators[index].pubkey
+        for i, index in enumerate(attestation_indices)
         if has_voted(attestation.attester_bitfield, i)
     ]
     message = blake(
         in_epoch_slot_height.to_bytes(8, byteorder='big') +
-        parent_hashes +
+        b''.join(parent_hashes) +
         attestation.shard_id.to_bytes(2, byteorder='big') +
         attestation.shard_block_hash
     )
@@ -200,7 +212,7 @@ def _process_block(crystallized_state,
             config
         )
 
-    new_attestations = active_state.pending_attestations + block.attestations,
+    new_attestations = active_state.pending_attestations + block.attestations
     new_recent_block_hashes = (
         active_state.recent_block_hashes[1:] +
         [block.hash]
@@ -214,10 +226,9 @@ def _process_block(crystallized_state,
     return new_active_state
 
 
-
-
 def _initialize_new_epoch(crystallized_state,
                           active_state,
+                          parent_block,
                           block,
                           config=DEFAULT_CONFIG):
     epoch_length = config['epoch_length']
@@ -228,7 +239,7 @@ def _initialize_new_epoch(crystallized_state,
     for i in range(epoch_length):
         slot = i + (epoch_number - 2) * epoch_length
         # next line assuming we store EPOCH_LENGTH * 2 block hashes
-        block_hash = crystallized_state.recent_block_hashes[i]
+        block_hash = active_state.recent_block_hashes[i]
         if block_hash in active_state.block_vote_cache:
             vote_balance = active_state.block_vote_cache[block_hash]['total_voter_deposits']
         else:
@@ -249,7 +260,7 @@ def _initialize_new_epoch(crystallized_state,
         if a.slot >= (epoch_number - 1) * epoch_length
     ]
 
-    dynasty = crystallized_state.dynasty  # STUB
+    dynasty = crystallized_state.current_dynasty  # STUB
     dynasty_seed = crystallized_state.dynasty_seed  # STUB
     dynasty_seed_last_reset = crystallized_state.dynasty_seed_last_reset  # STUB
     crosslinking_start_shard = 0  # stub. Needs to see where this epoch left off if didn't go through all
@@ -275,7 +286,6 @@ def _initialize_new_epoch(crystallized_state,
         last_finalized_slot=last_finalized_slot,
         current_dynasty=crystallized_state.current_dynasty,
         crosslinking_start_shard=crosslinking_start_shard,
-        current_checkpoint=b'\x00'*32,  # stub. Pretty sure this field should be removed from spec
         crosslink_records=[],  # stub. current spec does not specify when crosslinks added
         total_deposits=sum(map(lambda i: validators[i].balance, active_validator_indices)),
         dynasty_seed=dynasty_seed,
@@ -293,18 +303,37 @@ def _initialize_new_epoch(crystallized_state,
     return new_crystallized_state, new_active_state
 
 
+def _fill_recent_block_hashes(active_state,
+                              parent_block,
+                              block,
+                              config=DEFAULT_CONFIG):
+    missing_blocks = block.slot_number - parent_block.slot_number - 1
+    return ActiveState(
+        pending_attestations=[a for a in active_state.pending_attestations],
+        recent_block_hashes=active_state.recent_block_hashes[missing_blocks+1:] + [block.parent_hash] * missing_blocks + [block.hash],
+        block_vote_cache=copy(active_state.block_vote_cache)
+    )
+
+
 def compute_state_transition(parent_state,
+                             parent_block,
                              block,
                              config=DEFAULT_CONFIG):
     crystallized_state, active_state = parent_state
 
     assert validate_block(block)
 
+    # Update active state with any missing hashes and the recent block hash
+    # This is not part of the spec but is necessary to maintain proper attestation signatures
+    active_state = _fill_recent_block_hashes(active_state, parent_block, block, config)
+
+
     # Initialize a new epoch if needed
     if block.slot_number >= (crystallized_state.epoch_number + 1) * config['epoch_length']:
         crystallized_state, active_state = _initialize_new_epoch(
             crystallized_state,
             active_state,
+            parent_block,
             block,
             config
         )

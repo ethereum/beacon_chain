@@ -1,5 +1,5 @@
 from .crosslink_record import CrosslinkRecord
-from .shard_and_indices import ShardAndIndices
+from .shard_and_committee import ShardAndCommittee
 from .validator_record import ValidatorRecord
 
 
@@ -11,7 +11,7 @@ class CrystallizedState():
         'epoch_number': 'int64',
         # What active validators are part of the attester set
         # at what height, and in what shard
-        'indices_for_heights': [[ShardAndIndices]],
+        'indices_for_heights': [[ShardAndCommittee]],
         # The last justified slot
         'last_justified_slot': 'int64',
         # Number of consecutive justified slots ending at this one
@@ -22,8 +22,6 @@ class CrystallizedState():
         'current_dynasty': 'int64',
         # The next shard that crosslinking assignment will start from
         'crosslinking_start_shard': 'int16',
-        # The current FFG checkpoint
-        'current_checkpoint': 'hash32',
         # Records about the most recent crosslink for each shard
         'crosslink_records': [CrosslinkRecord],
         # Total balance of deposits
@@ -42,7 +40,6 @@ class CrystallizedState():
         'last_finalized_slot': 0,
         'current_dynasty': 0,
         'crosslinking_start_shard': 0,
-        'current_checkpoint': b'\x00'*32,
         'crosslink_records': [],
         'total_deposits': 0,
         'dynasty_seed': b'\x00'*32,

@@ -2,9 +2,8 @@ import pytest
 import random
 
 from beacon_chain.state.config import (
-    DEFAULT_SWITCH_DYNASTY,
+    DEFAULT_END_DYNASTY,
     DEPOSIT_SIZE,
-    END_EPOCH_GRACE_PERIOD,
     EPOCH_LENGTH,
     MAX_VALIDATOR_COUNT,
     MIN_COMMITTEE_SIZE,
@@ -33,15 +32,12 @@ from beacon_chain.state.crystallized_state import (
 from beacon_chain.state.validator_record import (
     ValidatorRecord,
 )
-from beacon_chain.state.new_state_transition import (
+from beacon_chain.state.state_transition import (
+    get_parent_hashes,
     compute_state_transition,
 )
 from beacon_chain.state.helpers import (
-    get_cutoffs,
-    get_si_for_height,
-    get_shuffling,
-    get_crosslink_shards,
-    get_crosslink_notaries,
+    get_new_shuffling,
 )
 
 
@@ -99,6 +95,19 @@ def sample_attestation_record_params():
 
 
 @pytest.fixture
+def sample_block_params():
+    return {
+        'parent_hash': b'\x55'*32,
+        'slot_number': 10,
+        'randao_reveal': b'\x34'*32,
+        'attestations': [],
+        'pow_chain_ref': b'\x32'*32,
+        'active_state_root': b'\x01'*32,
+        'crystallized_state_root': b'\x05'*32
+    }
+
+
+@pytest.fixture
 def sample_crystallized_state_params():
     return {
         'validators': [],
@@ -109,7 +118,6 @@ def sample_crystallized_state_params():
         'last_finalized_slot': 70,
         'current_dynasty': 4,
         'crosslinking_start_shard': 2,
-        'current_checkpoint': b'\x43'*32,
         'crosslink_records': [],
         'total_deposits': 10000,
         'dynasty_seed': b'\x55'*32,
@@ -127,10 +135,10 @@ def sample_recent_proposer_record_params():
 
 
 @pytest.fixture
-def sample_shard_and_indices_params():
+def sample_shard_and_committee_params():
     return {
         'shard_id': 10,
-        'validators': [],
+        'committee': [],
     }
 
 
@@ -153,18 +161,13 @@ def init_randao():
 
 
 @pytest.fixture
-def default_switch_dynasty():
-    return DEFAULT_SWITCH_DYNASTY
+def default_end_dynasty():
+    return DEFAULT_END_DYNASTY
 
 
 @pytest.fixture
 def deposit_size():
     return DEPOSIT_SIZE
-
-
-@pytest.fixture
-def end_epoch_grace_period():
-    return END_EPOCH_GRACE_PERIOD
 
 
 @pytest.fixture
@@ -193,18 +196,16 @@ def slot_duration():
 
 
 @pytest.fixture
-def config(default_switch_dynasty,
+def config(default_end_dynasty,
            deposit_size,
-           end_epoch_grace_period,
            epoch_length,
            max_validator_count,
            min_committee_size,
            shard_count,
            slot_duration):
     return generate_config(
-        default_switch_dynasty=default_switch_dynasty,
+        default_end_dynasty=default_end_dynasty,
         deposit_size=deposit_size,
-        end_epoch_grace_period=end_epoch_grace_period,
         epoch_length=epoch_length,
         max_validator_count=max_validator_count,
         min_committee_size=min_committee_size,
@@ -227,48 +228,60 @@ def init_validator_keys(pubkeys, num_validators):
 def genesis_crystallized_state(init_validator_keys,
                                init_shuffling_seed,
                                config):
-    return CrystallizedState(
-        active_validators=[ValidatorRecord(
+    current_dynasty = 1
+    crosslinking_start_shard = 0
+    validators = [
+        ValidatorRecord(
             pubkey=pub,
             withdrawal_shard=0,
             withdrawal_address=blake(pub.to_bytes(32, 'big'))[-20:],
             randao_commitment=b'\x55'*32,
             balance=config['deposit_size'],
-            switch_dynasty=config['default_switch_dynasty']
-        ) for pub in init_validator_keys],
-        queued_validators=[],
-        exited_validators=[],
-        current_epoch=1,
-        current_shuffling=get_shuffling(
-            init_shuffling_seed,
-            len(init_validator_keys),
-            config=config
-        ),
-        last_justified_epoch=0,
-        last_finalized_epoch=0,
-        current_dynasty=1,
-        next_shard=0,
-        current_checkpoint=blake(b'insert EOS constitution here'),
+            start_dynasty=current_dynasty,
+            end_dynasty=config['default_end_dynasty']
+        ) for pub in init_validator_keys
+    ]
+
+    indices_for_heights = get_new_shuffling(
+        validators,
+        current_dynasty,
+        crosslinking_start_shard,
+        init_shuffling_seed,
+        config
+    )
+    # concatenate with itself to span 2*EPOCH_LENGTH
+    indices_for_heights = indices_for_heights + indices_for_heights
+
+    return CrystallizedState(
+        validators=validators,
+        epoch_number=0,
+        indices_for_heights=indices_for_heights,
+        last_justified_slot=0,
+        justified_streak=0,
+        last_finalized_slot=0,
+        current_dynasty=current_dynasty,
+        crosslinking_start_shard=crosslinking_start_shard,
         crosslink_records=[
             CrosslinkRecord(hash=b'\x00'*32, epoch=0) for i in range(SHARD_COUNT)
         ],
-        total_deposits=config['deposit_size']*len(init_validator_keys),
+        total_deposits=config['deposit_size']*len(validators),
         dynasty_seed=init_shuffling_seed,
         dynasty_seed_last_reset=1
     )
 
 
 @pytest.fixture
-def genesis_active_state(genesis_crystallized_state):
+def genesis_active_state(genesis_crystallized_state, epoch_length):
+    recent_block_hashes = [b'\x00'*32] * epoch_length * 2
+
     return ActiveState(
-        attestations=[],
-        total_attester_deposits=0,
-        attester_bitfield=get_empty_bitfield(genesis_crystallized_state.num_active_validators)
+        pending_attestations=[],
+        recent_block_hashes=recent_block_hashes
     )
 
 
 @pytest.fixture
-def genesis_block(genesis_crystallized_state, genesis_active_state):
+def genesis_block():
     return Block(
         parent_hash=b'\x00'*32,
         slot_number=0,
@@ -280,178 +293,65 @@ def genesis_block(genesis_crystallized_state, genesis_active_state):
     )
 
 
-# NOT FIXED
-# Mock makes a block based upon the params passed indices
-@pytest.fixture
-def make_unfinished_block(keymap, config):
-    def make_unfinished_block(parent_state,
-                              parent,
-                              skips,
-                              attester_share=0.8,
-                              crosslink_shards_and_shares=None):
-        if crosslink_shards_and_shares is None:
-            crosslink_shards_and_shares = []
-
-        crystallized_state, active_state = parent_state
-        parent_attestation = serialize(parent)
-        indices, proposer = get_attesters_and_proposer(
-            crystallized_state,
-            active_state,
-            skips,
-            config
-        )
-
-        print('Selected indices: %r' % indices)
-        print('Selected block proposer: %d' % proposer)
-
-        # Randomly pick indices to include
-        is_attesting = [random.random() < attester_share for _ in indices]
-        # Attestations
-        sigs = [
-            bls.sign(
-                parent_attestation,
-                keymap[crystallized_state.active_validators[indices[i]].pubkey]
-            )
-            for i, attesting in enumerate(is_attesting) if attesting
-        ]
-        attestation_aggregate_sig = bls.aggregate_sigs(sigs)
-        print('Aggregated sig')
-
-        attestation_bitfield = get_empty_bitfield(len(indices))
-        for i, attesting in enumerate(is_attesting):
-            if attesting:
-                attestation_bitfield = set_voted(attestation_bitfield, i)
-        print('Aggregate bitfield:', bin(int.from_bytes(attestation_bitfield, 'big')))
-
-        # Randomly pick indices to include for crosslinks
-        shard_aggregate_votes = []
-
-        # The shards that are selected to be crosslinking
-        crosslink_shards = get_crosslink_shards(crystallized_state, config=config)
-
-        for shard, crosslinker_share in crosslink_shards_and_shares:
-            # Check if this shard is in the crosslink shards list
-            assert shard in crosslink_shards
-
-            print('Making crosslink in shard %d' % shard)
-            indices = get_crosslink_notaries(crystallized_state, shard, crosslink_shards=crosslink_shards, config=config)
-            print('Indices: %r' % indices)
-            is_notarizing = [random.random() < attester_share for _ in indices]
-            notary_bitfield = get_empty_bitfield(len(indices))
-            for i, notarizing in enumerate(is_notarizing):
-                if notarizing:
-                    notary_bitfield = set_voted(notary_bitfield, i)
-            print('Bitfield:', bin(int.from_bytes(notary_bitfield, 'big')))
-            shard_block_hash = blake(bytes([shard]))
-            crosslink_attestation_hash = get_crosslink_aggvote_msg(
-                shard,
-                shard_block_hash,
-                crystallized_state
-            )
-            sigs = [
-                bls.sign(
-                    crosslink_attestation_hash,
-                    keymap[crystallized_state.active_validators[indices[i]].pubkey]
-                )
-                for i, notarizing in enumerate(is_notarizing) if notarizing
-            ]
-            v = AggregateVote(
-                shard_id=shard,
-                shard_block_hash=shard_block_hash,
-                notary_bitfield=notary_bitfield,
-                aggregate_sig=list(bls.aggregate_sigs(sigs))
-            )
-            shard_aggregate_votes.append(v)
-        print('Added %d shard aggregate votes' % len(crosslink_shards_and_shares))
-
-        block = Block(
-            parent_hash=blake(parent_attestation),
-            skip_count=skips,
-            randao_reveal=blake(str(random.random()).encode('utf-8')),
-            attestation_bitfield=attestation_bitfield,
-            attestation_aggregate_sig=list(attestation_aggregate_sig),
-            shard_aggregate_votes=shard_aggregate_votes,
-            main_chain_ref=b'\x00'*32,
-            state_hash=b'\x00'*64
-        )
-        return block, proposer
-    return make_unfinished_block
-
-
 @pytest.fixture
 def mock_make_attestations(keymap, config):
     def mock_make_attestations(parent_state,
                                block,
                                attester_share=0.8):
-        print(config)
         crystallized_state, active_state = parent_state
+        epoch_length = config['epoch_length']
 
-        height_cutoffs, shard_cutoffs = get_cutoffs(
-            crystallized_state.num_active_validators,
-            config
-        )
-        in_epoch_slot_height = block.slot_number % config['epoch_length']
+        in_epoch_slot_height = block.slot_number % epoch_length
+        indices = crystallized_state.indices_for_heights[epoch_length + in_epoch_slot_height]
 
-        sis = get_si_for_height(
-            height_cutoffs,
-            shard_cutoffs,
-            in_epoch_slot_height,
-            config
-        )
-        print("Generating attestations for shards: %s" % sis)
+        print("Generating attestations for shards: %s" % len(indices))
 
         attestations = []
-        for si in sis:
-            if in_epoch_slot_height < config['epoch_length'] - config['end_epoch_grace_period']:
-                start = shard_cutoffs[si]
-                end = shard_cutoffs[si + 1]
-            else:
-                start = height_cutoffs[in_epoch_slot_height]
-                end = height_cutoffs[in_epoch_slot_height]
-
-            # reverse
-            shard_id = (si + crystallized_state.next_shard) % config['shard_count']
+        for shard_and_committee in indices:
+            shard_id = shard_and_committee.shard_id
+            committee_indices = shard_and_committee.committee
             print("Generating attestation for shard %s" % shard_id)
+            print("Committee size %s" % len(committee_indices))
 
             # Create attestation
             attestation = AttestationRecord(
                 slot=block.slot_number,
-                parent_hash=blake(serialize(block)),
-                checkpoint_hash=crystallized_state.current_checkpoint,
-                shard_id=shard_id,
+                shard_id=shard_and_committee.shard_id,
+                oblique_parent_hashes=[],
                 shard_block_hash=blake(bytes(str(shard_id), 'utf-8')),
-                attester_bitfield=get_empty_bitfield(end - start)
+                attester_bitfield=get_empty_bitfield(len(committee_indices))
             )
 
             # Randomly pick indices to include
-            is_attesting = [random.random() < attester_share for _ in range(end - start)]
+            is_attesting = [
+                random.random() < attester_share for _ in range(len(committee_indices))
+            ]
             # Proposer always attests
             is_attesting[0] = True
 
-            # Sign with is_attesting and set bit field
-            # THE FOLLOWING IS WRONG
+            parent_hashes = get_parent_hashes(
+                active_state,
+                block,
+                attestation,
+                config
+            )
             message = blake(
                 in_epoch_slot_height.to_bytes(8, byteorder='big') +
-                attestation.parent_hash +
-                attestation.checkpoint_hash +
-                attestation.shard_id.to_bytes(2, byteorder='big') +
+                b''.join(parent_hashes) +
+                shard_id.to_bytes(2, byteorder='big') +
                 attestation.shard_block_hash
             )
             sigs = [
                 bls.sign(
                     message,
-                    keymap[
-                        crystallized_state.active_validators[
-                            crystallized_state.current_shuffling[start + i]
-                        ].pubkey
-                    ]
+                    keymap[crystallized_state.validators[indice].pubkey]
                 )
-                for i, attesting in enumerate(is_attesting) if attesting
+                for i, indice in enumerate(committee_indices) if is_attesting[i]
             ]
             attestation.aggregate_sig = bls.aggregate_sigs(sigs)
             print('Aggregated sig')
 
-            attestation_bitfield = get_empty_bitfield(end - start)
+            attestation_bitfield = get_empty_bitfield(len(committee_indices))
             for i, attesting in enumerate(is_attesting):
                 if attesting:
                     attestation_bitfield = set_voted(attestation_bitfield, i)
@@ -460,22 +360,12 @@ def mock_make_attestations(keymap, config):
 
             attestations.append(attestation)
 
-        # TODO include blank attestations for the end period
-        # find start and end of validators in current shuffling
-        # if in_epoch_slot_height < config['epoch_length'] - config['end_epoch_grace_period']:
-            # si = (attestation.shard_id - crystallized_state.next_shard) % config['shard_count']
-            # start = shard_cutoffs[si]
-            # end = shard_cutoffs[si + 1]
-        # else:
-            # start = height_cutoffs[in_epoch_slot_height]
-            # end = height_cutoffs[in_epoch_slot_height]
-
         return attestations
     return mock_make_attestations
 
- 
+
 @pytest.fixture
-def mock_make_child(keymap, make_unfinished_block, config):
+def mock_make_child(keymap, config):
     def mock_make_child(parent_state,
                         parent,
                         slot_number,
@@ -485,7 +375,7 @@ def mock_make_child(keymap, make_unfinished_block, config):
 
         crystallized_state, active_state = parent_state
         block = Block(
-            parent_hash=blake(serialize(parent)),
+            parent_hash=parent.hash,
             slot_number=slot_number,
             randao_reveal=blake(str(random.random()).encode('utf-8')),
             attestations=attestations,
@@ -497,6 +387,7 @@ def mock_make_child(keymap, make_unfinished_block, config):
 
         new_crystallized_state, new_active_state = compute_state_transition(
             (crystallized_state, active_state),
+            parent,
             block,
             config=config
         )

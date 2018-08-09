@@ -6,7 +6,7 @@ class ActiveState():
     fields = {
         # Attestations that have not yet been processed
         'pending_attestations': [AttestationRecord],
-        # Most recent EPOCH_LENGTH block hashes, older to newer
+        # Most recent 2*EPOCH_LENGTH block hashes, older to newer
         'recent_block_hashes': ['hash32'],
     }
     defaults = {

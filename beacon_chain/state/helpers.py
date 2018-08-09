@@ -5,11 +5,11 @@ from beacon_chain.utils.blake import (
 from beacon_chain.state.config import (
     DEFAULT_CONFIG,
 )
-from beacon_chain.state.crosslink_records import (
+from beacon_chain.state.crosslink_record import (
     CrosslinkRecord,
 )
-from beacon_chain.state.shard_and_indices import (
-    ShardAndIndices,
+from beacon_chain.state.shard_and_committee import (
+    ShardAndCommittee,
 )
 from beacon_chain.utils.simpleserialize import (
     deepcopy,
@@ -64,7 +64,7 @@ def get_new_shuffling(validators,
                       config=DEFAULT_CONFIG):
     epoch_length = config['epoch_length']
     min_committee_size = config['min_committee_size']
-    avs = get_active_validator_indices(validators, dynasty)
+    avs = get_active_validator_indices(dynasty, validators)
     if len(avs) >= epoch_length * min_committee_size:
         committees_per_slot = int(len(avs) // epoch_length // (min_committee_size * 2)) + 1
         slots_per_committee = 1
@@ -77,7 +77,7 @@ def get_new_shuffling(validators,
     o = []
     for i, height_indices in enumerate(split(shuffle(avs, seed, config), epoch_length)):
         shard_indices = split(height_indices, committees_per_slot)
-        o.append([ShardAndIndices(
+        o.append([ShardAndCommittee(
             shard_id=(
                 crosslinking_start_shard +
                 i * committees_per_slot // slots_per_committee + j
