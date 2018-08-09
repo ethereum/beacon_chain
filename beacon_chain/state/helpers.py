@@ -50,6 +50,7 @@ def split(lst, N):
 def get_new_shuffling(validators,
                       dynasty,
                       crosslinking_start_shard,
+                      seed,
                       config=DEFAULT_CONFIG):
     epoch_length = config['epoch_length']
     min_committee_size = config['min_committee_size']
@@ -64,7 +65,7 @@ def get_new_shuffling(validators,
                slots_per_committee < epoch_length):
             slots_per_committee *= 2
     o = []
-    for i, height_indices in enumerate(split(shuffle(avs), epoch_length)):
+    for i, height_indices in enumerate(split(shuffle(avs, seed, config), epoch_length)):
         shard_indices = split(height_indices, committees_per_slot)
         o.append([ShardAndIndices(
             shard_id=(
