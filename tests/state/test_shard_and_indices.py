@@ -1,6 +1,5 @@
 import pytest
 
-
 from beacon_chain.state.shard_and_indices import (
     ShardAndIndices,
 )

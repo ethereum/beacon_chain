@@ -57,7 +57,7 @@ def get_parent_hashes(active_state,
                       block,
                       attestation,
                       config=DEFAULT_CONFIG):
-    # NOTE: This is spec'd incorrectly and will likely change pending review from  Vitalik
+    # NOTE: This is spec'd incorrectly and will likely change pending review from Vitalik
     parent_hashes = (
         attestation.oblique_parent_hashes +
         active_state.recent_block_hashes[
@@ -191,12 +191,14 @@ def _process_block(crystallized_state,
                                     attestation,
                                     block,
                                     config)
-        new_block_vote_cache = _update_block_vote_cache(crystallized_state,
-                                                        active_state,
-                                                        attestation,
-                                                        block,
-                                                        new_block_vote_cache,
-                                                        config)
+        new_block_vote_cache = _update_block_vote_cache(
+            crystallized_state,
+            active_state,
+            attestation,
+            block,
+            new_block_vote_cache,
+            config
+        )
 
     new_attestations = active_state.pending_attestations + block.attestations,
     new_recent_block_hashes = (
@@ -212,54 +214,6 @@ def _process_block(crystallized_state,
     return new_active_state
 
 
-def old_process_crosslinks():
-    #
-    # Process crosslink roots and rewards
-    #
-    new_crosslink_records = [crosslink for crosslink in crystallized_state.crosslink_records]
-    for shard_id in range(config['shard_count']):
-        attestations = filter(lambda a: a.shard_id == shard_id, active_state.attestations)
-        roots = set(map(lambda a: a.shard_block_hash, attestations))
-        start = shard_cutoffs[shard_id]
-        end = shard_cutoffs[shard_id + 1]
-        root_attester_bitfields = {}
-        root_total_balance = {}
-        best_root = b'\x00'*32
-        best_root_deposit_size = 0
-
-        # find best_root
-        for root in roots:
-            root_attestations = filter(lambda a: a.shard_block_hash == root, attestations)
-            root_attester_bitfields[root] = or_bitfields(
-                map(lambda a: a.attester_bitfield, root_attestations)
-            )
-            root_total_balance[root] = 0
-            for i in range(end - start):
-                if has_voted(root_attester_bitfields[root], i):
-                    validator_index = crystallized_state.current_shuffling[start + i]
-                    balance = crystallized_state.active_validators[validator_index].balance
-                    root_total_balance[root] += balance
-
-            if root_total_balance[root] > best_root_deposit_size:
-                best_root = root
-                best_root_deposit_size = root_total_balance[root]
-
-        has_adequate_deposit = best_root_deposit_size * 3 >= crystallized_state.total_deposits * 2
-        needs_new_crosslink = (
-            crystallized_state.crosslink_records[shard_id].epoch <
-            crystallized_state.last_finalized_epoch
-        )
-        if has_adequate_deposit and needs_new_crosslink:
-            new_crosslink_records[shard_id] = CrosslinkRecord(
-                hash=best_root,
-                epoch=crystallized_state.current_epoch
-            )
-            for i in range(end - start):
-                validator_index = crystallized_state.current_shuffling[start + i]
-                if has_voted(root_attester_bitfields[best_root], i):
-                    new_active_validators[validator_index].balance += config['online_crosslink_reward']
-                else:
-                    new_active_validators[validator_index].balance -= config['offline_crosslink_penalty']
 
 
 def _initialize_new_epoch(crystallized_state,
