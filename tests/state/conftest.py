@@ -55,7 +55,7 @@ from beacon_chain.utils.simpleserialize import (
 
 bls = beacon_chain.utils.bls
 
-DEFAULT_SHUFFLING_SEED = b'\35'*32
+DEFAULT_SHUFFLING_SEED = b'\00'*32
 DEFAULT_RANDAO = b'\45'*32
 DEFAULT_NUM_VALIDATORS = 40
 
@@ -145,7 +145,7 @@ def sample_shard_and_committee_params():
 @pytest.fixture
 def sample_crosslink_record_params():
     return {
-        'epoch': 0,
+        'dynasty': 2,
         'hash': b'\x43'*32,
     }
 
@@ -262,7 +262,7 @@ def genesis_crystallized_state(init_validator_keys,
         current_dynasty=current_dynasty,
         crosslinking_start_shard=crosslinking_start_shard,
         crosslink_records=[
-            CrosslinkRecord(hash=b'\x00'*32, epoch=0) for i in range(SHARD_COUNT)
+            CrosslinkRecord(hash=b'\x00'*32, dynasty=0) for i in range(SHARD_COUNT)
         ],
         total_deposits=config['deposit_size']*len(validators),
         dynasty_seed=init_shuffling_seed,

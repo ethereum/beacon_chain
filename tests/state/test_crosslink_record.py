@@ -1,6 +1,5 @@
 import pytest
 
-
 from beacon_chain.state.crosslink_record import (
     CrosslinkRecord,
 )
@@ -9,7 +8,7 @@ from beacon_chain.state.crosslink_record import (
 @pytest.mark.parametrize(
     'param,default_value',
     [
-        ('epoch', 0),
+        ('dynasty', 0),
         ('hash', b'\x00'*32),
     ]
 )

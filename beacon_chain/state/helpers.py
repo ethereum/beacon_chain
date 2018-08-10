@@ -20,6 +20,14 @@ from beacon_chain.utils.bitfield import (
 )
 
 
+def get_new_recent_block_hashes(old_block_hashes,
+                                parent_slot,
+                                current_slot,
+                                parent_hash):
+    d = current_slot - parent_slot
+    return old_block_hashes[d:] + [parent_hash] * min(d, len(old_block_hashes))
+
+
 def get_active_validator_indices(dynasty, validators):
     o = []
     for i in range(len(validators)):

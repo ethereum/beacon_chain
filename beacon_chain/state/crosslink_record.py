@@ -1,13 +1,13 @@
 
 class CrosslinkRecord():
     fields = {
-        # What epoch the crosslink was submitted in
-        'epoch': 'int64',
+        # What dynasty the crosslink was submitted in
+        'dynasty': 'int64',
         # The block hash
         'hash': 'hash32'
     }
     defaults = {
-        'epoch': 0,
+        'dynasty': 0,
         'hash': b'\x00'*32
     }
 
