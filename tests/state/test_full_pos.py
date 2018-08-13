@@ -148,4 +148,30 @@ def test_pos_finalization(genesis_crystallized_state,
     assert c.last_state_recalc == genesis_crystallized_state.last_state_recalc + config['cycle_length']*2
     assert c.justified_streak == config['cycle_length'] * 2
     assert c.last_justified_slot == c.last_state_recalc - config['cycle_length'] - 1
-    assert c.last_finalized_slot == c.last_justified_slot
+    # still 0 because CYCLE_LENGTH + 1 before lsat_justified_slot is negative
+    assert c.last_finalized_slot == 0
+
+    # One more cycle!
+    for i in range(config['cycle_length'] - 1):
+        attestations = mock_make_attestations(
+            (c, a),
+            block,
+            attester_share=1.0
+        )
+        block, c, a = mock_make_child((c, a), block, block.slot_number + 1, attestations)
+
+    # do cycle transition
+    attestations = mock_make_attestations(
+        (c, a),
+        block,
+        attester_share=1.0
+    )
+    block, c, a = mock_make_child((c, a), block, block.slot_number + 1, attestations)
+
+    assert c.last_state_recalc == genesis_crystallized_state.last_state_recalc + config['cycle_length']*3
+    assert c.justified_streak == config['cycle_length'] * 3
+    assert c.last_justified_slot == c.last_state_recalc - config['cycle_length'] - 1
+    # still 0 because CYCLE_LENGTH + 1 before lsat_justified_slot is negative
+    assert c.last_finalized_slot == c.last_justified_slot - config['cycle_length'] - 1
+
+

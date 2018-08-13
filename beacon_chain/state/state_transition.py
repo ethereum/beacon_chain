@@ -292,7 +292,7 @@ def _initialize_new_cycle(crystallized_state,
             justified_streak = 0
 
         if justified_streak >= cycle_length + 1:
-            last_finalized_slot = max(last_finalized_slot, slot)
+            last_finalized_slot = max(last_finalized_slot, slot - config['cycle_length'] - 1)
 
     crosslink_records = _process_updated_crosslinks(
         crystallized_state,
