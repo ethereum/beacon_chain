@@ -4,7 +4,7 @@ import random
 from beacon_chain.state.config import (
     DEFAULT_END_DYNASTY,
     DEPOSIT_SIZE,
-    EPOCH_LENGTH,
+    CYCLE_LENGTH,
     MAX_VALIDATOR_COUNT,
     MIN_COMMITTEE_SIZE,
     SHARD_COUNT,
@@ -16,9 +16,6 @@ from beacon_chain.state.active_state import (
 )
 from beacon_chain.state.attestation_record import (
     AttestationRecord,
-)
-from beacon_chain.state.aggregate_vote import (
-    AggregateVote,
 )
 from beacon_chain.state.block import (
     Block,
@@ -39,7 +36,6 @@ from beacon_chain.state.state_transition import (
 from beacon_chain.state.helpers import (
     get_new_shuffling,
 )
-
 
 import beacon_chain.utils.bls
 from beacon_chain.utils.bitfield import (
@@ -111,7 +107,7 @@ def sample_block_params():
 def sample_crystallized_state_params():
     return {
         'validators': [],
-        'epoch_number': 30,
+        'last_state_recalc': 50,
         'indices_for_heights': [],
         'last_justified_slot': 100,
         'justified_streak': 10,
@@ -171,8 +167,8 @@ def deposit_size():
 
 
 @pytest.fixture
-def epoch_length():
-    return EPOCH_LENGTH
+def cycle_length():
+    return CYCLE_LENGTH
 
 
 @pytest.fixture
@@ -198,7 +194,7 @@ def slot_duration():
 @pytest.fixture
 def config(default_end_dynasty,
            deposit_size,
-           epoch_length,
+           cycle_length,
            max_validator_count,
            min_committee_size,
            shard_count,
@@ -206,7 +202,7 @@ def config(default_end_dynasty,
     return generate_config(
         default_end_dynasty=default_end_dynasty,
         deposit_size=deposit_size,
-        epoch_length=epoch_length,
+        cycle_length=cycle_length,
         max_validator_count=max_validator_count,
         min_committee_size=min_committee_size,
         shard_count=shard_count,
@@ -225,12 +221,10 @@ def init_validator_keys(pubkeys, num_validators):
 
 
 @pytest.fixture
-def genesis_crystallized_state(init_validator_keys,
-                               init_shuffling_seed,
-                               config):
+def genesis_validators(init_validator_keys,
+                       config):
     current_dynasty = 1
-    crosslinking_start_shard = 0
-    validators = [
+    return [
         ValidatorRecord(
             pubkey=pub,
             withdrawal_shard=0,
@@ -242,6 +236,15 @@ def genesis_crystallized_state(init_validator_keys,
         ) for pub in init_validator_keys
     ]
 
+
+@pytest.fixture
+def genesis_crystallized_state(genesis_validators,
+                               init_shuffling_seed,
+                               config):
+    current_dynasty = 1
+    crosslinking_start_shard = 0
+    validators = genesis_validators
+
     indices_for_heights = get_new_shuffling(
         validators,
         current_dynasty,
@@ -249,7 +252,7 @@ def genesis_crystallized_state(init_validator_keys,
         init_shuffling_seed,
         config
     )
-    # concatenate with itself to span 2*EPOCH_LENGTH
+    # concatenate with itself to span 2*CYCLE_LENGTH
     indices_for_heights = indices_for_heights + indices_for_heights
 
     return CrystallizedState(
@@ -271,8 +274,8 @@ def genesis_crystallized_state(init_validator_keys,
 
 
 @pytest.fixture
-def genesis_active_state(genesis_crystallized_state, epoch_length):
-    recent_block_hashes = [b'\x00'*32] * epoch_length * 2
+def genesis_active_state(genesis_crystallized_state, cycle_length):
+    recent_block_hashes = [b'\x00'*32] * cycle_length * 2
 
     return ActiveState(
         pending_attestations=[],
@@ -299,10 +302,10 @@ def mock_make_attestations(keymap, config):
                                block,
                                attester_share=0.8):
         crystallized_state, active_state = parent_state
-        epoch_length = config['epoch_length']
+        cycle_length = config['cycle_length']
 
-        in_epoch_slot_height = block.slot_number % epoch_length
-        indices = crystallized_state.indices_for_heights[epoch_length + in_epoch_slot_height]
+        in_epoch_slot_height = block.slot_number % cycle_length
+        indices = crystallized_state.indices_for_heights[cycle_length + in_epoch_slot_height]
 
         print("Generating attestations for shards: %s" % len(indices))
 

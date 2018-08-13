@@ -70,20 +70,20 @@ def get_new_shuffling(validators,
                       crosslinking_start_shard,
                       seed,
                       config=DEFAULT_CONFIG):
-    epoch_length = config['epoch_length']
+    cycle_length = config['cycle_length']
     min_committee_size = config['min_committee_size']
     avs = get_active_validator_indices(dynasty, validators)
-    if len(avs) >= epoch_length * min_committee_size:
-        committees_per_slot = int(len(avs) // epoch_length // (min_committee_size * 2)) + 1
+    if len(avs) >= cycle_length * min_committee_size:
+        committees_per_slot = int(len(avs) // cycle_length // (min_committee_size * 2)) + 1
         slots_per_committee = 1
     else:
         committees_per_slot = 1
         slots_per_committee = 1
-        while (len(avs) * slots_per_committee < epoch_length * min_committee_size and
-               slots_per_committee < epoch_length):
+        while (len(avs) * slots_per_committee < cycle_length * min_committee_size and
+               slots_per_committee < cycle_length):
             slots_per_committee *= 2
     o = []
-    for i, height_indices in enumerate(split(shuffle(avs, seed, config), epoch_length)):
+    for i, height_indices in enumerate(split(shuffle(avs, seed, config), cycle_length)):
         shard_indices = split(height_indices, committees_per_slot)
         o.append([ShardAndCommittee(
             shard_id=(

@@ -16,7 +16,7 @@ from tests.state.helpers import (
     'param,default_value',
     [
         ('validators', []),
-        ('epoch_number', 0),
+        ('last_state_recalc', 0),
         ('indices_for_heights', []),
         ('last_justified_slot', 0),
         ('justified_streak', 0),
