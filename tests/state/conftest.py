@@ -32,14 +32,14 @@ from beacon_chain.state.validator_record import (
 )
 from beacon_chain.state.state_transition import (
     compute_state_transition,
-    get_attesters_and_proposer,
     get_crosslink_aggvote_msg,
-    get_shuffling,
     state_hash,
 )
 from beacon_chain.state.helpers import (
+    get_attesters_and_proposer,
     get_crosslink_shards,
     get_crosslink_notaries,
+    get_shuffling,
 )
 
 
