@@ -1,5 +1,4 @@
 from beacon_chain.utils.blake import blake
-# from beacon_chain.utils.bls import verify, sign
 from beacon_chain.utils.simpleserialize import serialize
 
 from .attestation_record import AttestationRecord
@@ -37,17 +36,6 @@ class Block():
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
-
-    # def sign(self, key):
-        # self.sig = [0, 0]
-        # self.sig = list(sign(serialize(self), key))
-
-    # def verify(self, pub):
-        # zig = self.sig
-        # self.sig = [0, 0]
-        # o = verify(serialize(self), pub, tuple(zig))
-        # self.sig = zig
-        # return o
 
     @property
     def hash(self):

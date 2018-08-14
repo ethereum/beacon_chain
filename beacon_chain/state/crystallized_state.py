@@ -52,9 +52,6 @@ class CrystallizedState():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
-        # Check if num_active_validators == num_current_shuffling
-        # assert self.num_validators == len(self.current_shuffling)
-
     @property
     def num_validators(self):
         return len(self.validators)

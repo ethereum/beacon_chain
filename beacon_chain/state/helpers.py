@@ -1,22 +1,11 @@
-from beacon_chain.utils.blake import (
-    blake,
-)
-
 from beacon_chain.state.config import (
     DEFAULT_CONFIG,
-)
-from beacon_chain.state.crosslink_record import (
-    CrosslinkRecord,
 )
 from beacon_chain.state.shard_and_committee import (
     ShardAndCommittee,
 )
-from beacon_chain.utils.simpleserialize import (
-    deepcopy,
-)
-from beacon_chain.utils.bitfield import (
-    has_voted,
-    or_bitfields,
+from beacon_chain.utils.blake import (
+    blake,
 )
 
 
@@ -93,61 +82,3 @@ def get_new_shuffling(validators,
             committee=indices
         ) for j, indices in enumerate(shard_indices)])
     return o
-
-
-#
-# Old code storage
-#
-
-# This is the old process crosslinks code
-# processing crosslinks is currently not in the spec source
-# I want to keep this around until we know what the spec looks like
-def old_process_crosslinks(crystallized_state, active_state, shard_cutoffs, config=DEFAULT_CONFIG):
-    #
-    # Process crosslink roots and rewards
-    #
-    new_active_validators = deepcopy(crystallized_state.validators)
-    new_crosslink_records = [crosslink for crosslink in crystallized_state.crosslink_records]
-    for shard_id in range(config['shard_count']):
-        attestations = filter(lambda a: a.shard_id == shard_id, active_state.attestations)
-        roots = set(map(lambda a: a.shard_block_hash, attestations))
-        start = shard_cutoffs[shard_id]
-        end = shard_cutoffs[shard_id + 1]
-        root_attester_bitfields = {}
-        root_total_balance = {}
-        best_root = b'\x00'*32
-        best_root_deposit_size = 0
-
-        # find best_root
-        for root in roots:
-            root_attestations = filter(lambda a: a.shard_block_hash == root, attestations)
-            root_attester_bitfields[root] = or_bitfields(
-                map(lambda a: a.attester_bitfield, root_attestations)
-            )
-            root_total_balance[root] = 0
-            for i in range(end - start):
-                if has_voted(root_attester_bitfields[root], i):
-                    validator_index = crystallized_state.current_shuffling[start + i]
-                    balance = crystallized_state.active_validators[validator_index].balance
-                    root_total_balance[root] += balance
-
-            if root_total_balance[root] > best_root_deposit_size:
-                best_root = root
-                best_root_deposit_size = root_total_balance[root]
-
-        has_adequate_deposit = best_root_deposit_size * 3 >= crystallized_state.total_deposits * 2
-        needs_new_crosslink = (
-            crystallized_state.crosslink_records[shard_id].epoch <
-            crystallized_state.last_finalized_epoch
-        )
-        if has_adequate_deposit and needs_new_crosslink:
-            new_crosslink_records[shard_id] = CrosslinkRecord(
-                hash=best_root,
-                epoch=crystallized_state.current_epoch
-            )
-            for i in range(end - start):
-                validator_index = crystallized_state.current_shuffling[start + i]
-                if has_voted(root_attester_bitfields[best_root], i):
-                    new_active_validators[validator_index].balance += config['online_crosslink_reward']
-                else:
-                    new_active_validators[validator_index].balance -= config['offline_crosslink_penalty']

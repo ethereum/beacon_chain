@@ -11,7 +11,7 @@ class ValidatorRecord():
         'randao_commitment': 'hash32',
         # Current balance
         'balance': 'int64',
-        # Dynastyy where the validator is inducted
+        # Dynasty where the validator is inducted
         'start_dynasty': 'int64',
         # Dynasty where the validator leaves
         'end_dynasty': 'int64'

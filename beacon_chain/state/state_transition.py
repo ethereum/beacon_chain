@@ -367,7 +367,7 @@ def compute_state_transition(parent_state,
 
     assert validate_block(block)
 
-    # Update active state with any missing hashes and the recent block hash
+    # Update active state to fill any missing hashes with parent block hash
     active_state = _fill_recent_block_hashes(active_state, parent_block, block, config)
 
     # Initialize a new cycle if needed
