@@ -332,6 +332,7 @@ def mock_make_attestations(keymap, config):
             # Proposer always attests
             is_attesting[0] = True
 
+            # Generating signatures and aggregating result
             parent_hashes = get_parent_hashes(
                 active_state,
                 block,

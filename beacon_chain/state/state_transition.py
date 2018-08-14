@@ -165,13 +165,8 @@ def _update_block_vote_cache(crystallized_state,
                              block,
                              block_vote_cache,
                              config):
-    new_block_vote_cache = {
-        block_hash: {
-            'voter_indices': copy(block_vote_cache[block_hash]['voter_indices']),
-            'total_voter_deposits': block_vote_cache[block_hash]['total_voter_deposits']
-        }
-        for block_hash in block_vote_cache
-    }
+    new_block_vote_cache = deepcopy(block_vote_cache)
+
     parent_hashes = get_parent_hashes(
         active_state,
         block,
@@ -205,7 +200,7 @@ def _process_block(crystallized_state,
                    active_state,
                    block,
                    config=DEFAULT_CONFIG):
-    new_block_vote_cache = copy(active_state.block_vote_cache)
+    new_block_vote_cache = deepcopy(active_state.block_vote_cache)
     for attestation in block.attestations:
         assert validate_attestation(crystallized_state,
                                     active_state,
@@ -337,7 +332,7 @@ def _initialize_new_cycle(crystallized_state,
         recent_block_hashes=deepcopy(active_state.recent_block_hashes),
         # Should probably clean up block_vote_cache but old records won't break cache
         # so okay for now
-        block_vote_cache=copy(active_state.block_vote_cache)
+        block_vote_cache=deepcopy(active_state.block_vote_cache)
     )
 
     return new_crystallized_state, new_active_state
@@ -355,7 +350,7 @@ def _fill_recent_block_hashes(active_state,
             block.slot_number,
             block.parent_hash
         ),
-        block_vote_cache=copy(active_state.block_vote_cache)
+        block_vote_cache=deepcopy(active_state.block_vote_cache)
     )
 
 
