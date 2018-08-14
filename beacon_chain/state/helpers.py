@@ -9,6 +9,51 @@ from beacon_chain.utils.blake import (
 )
 
 
+def is_power_of_two(num):
+    return ((num & (num - 1)) == 0) and num != 0
+
+
+def get_parent_hashes(active_state,
+                      block,
+                      attestation,
+                      config=DEFAULT_CONFIG):
+    cycle_length = config['cycle_length']
+    oblique_parent_hashes = attestation.oblique_parent_hashes
+
+    parent_hashes = (
+        active_state.recent_block_hashes[
+            cycle_length + attestation.slot - block.slot_number:
+            cycle_length * 2 + attestation.slot - block.slot_number - len(oblique_parent_hashes)
+        ] +
+        oblique_parent_hashes
+
+    )
+    return parent_hashes
+
+
+def get_attestation_indices(crystallized_state,
+                            attestation,
+                            config=DEFAULT_CONFIG):
+    last_state_recalc = crystallized_state.last_state_recalc
+    cycle_length = config['cycle_length']
+    indices_for_heights = crystallized_state.indices_for_heights
+
+    shard_position = list(filter(
+        lambda x: (
+            indices_for_heights[attestation.slot - last_state_recalc + cycle_length][x].shard_id ==
+            attestation.shard_id
+        ),
+        range(len(indices_for_heights[attestation.slot - last_state_recalc + cycle_length]))
+    ))[0]
+    attestation_indices = (
+        indices_for_heights[
+            attestation.slot - last_state_recalc + cycle_length
+        ][shard_position].committee
+    )
+
+    return attestation_indices
+
+
 def get_new_recent_block_hashes(old_block_hashes,
                                 parent_slot,
                                 current_slot,

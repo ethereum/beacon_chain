@@ -30,11 +30,11 @@ from beacon_chain.state.validator_record import (
     ValidatorRecord,
 )
 from beacon_chain.state.state_transition import (
-    get_parent_hashes,
     compute_state_transition,
 )
 from beacon_chain.state.helpers import (
     get_new_shuffling,
+    get_parent_hashes,
 )
 
 import beacon_chain.utils.bls

@@ -1,5 +1,3 @@
-from copy import copy
-
 from .config import (
     DEFAULT_CONFIG,
 )
@@ -14,7 +12,9 @@ from .crystallized_state import (
 )
 from .helpers import (
     get_active_validator_indices,
+    get_attestation_indices,
     get_new_recent_block_hashes,
+    get_parent_hashes,
 )
 
 import beacon_chain.utils.bls as bls
@@ -30,64 +30,12 @@ from beacon_chain.utils.simpleserialize import (
 )
 
 
-def is_power_of_two(num):
-    return ((num & (num - 1)) == 0) and num != 0
-
-
-def _compute_ffg_participation_rewards(crystallized_state,
-                                       active_state,
-                                       config):
-    # STUB
-    return 1, 1
-
-
 def validate_block(block):
     # ensure parent processed
     # ensure pow_chain_ref processed
     # ensure local time is large enough to process this block's slot
 
     return True
-
-
-def get_parent_hashes(active_state,
-                      block,
-                      attestation,
-                      config=DEFAULT_CONFIG):
-    cycle_length = config['cycle_length']
-    oblique_parent_hashes = attestation.oblique_parent_hashes
-
-    parent_hashes = (
-        active_state.recent_block_hashes[
-            cycle_length + attestation.slot - block.slot_number:
-            cycle_length * 2 + attestation.slot - block.slot_number - len(oblique_parent_hashes)
-        ] +
-        oblique_parent_hashes
-
-    )
-    return parent_hashes
-
-
-def get_attestation_indices(crystallized_state,
-                            attestation,
-                            config=DEFAULT_CONFIG):
-    last_state_recalc = crystallized_state.last_state_recalc
-    cycle_length = config['cycle_length']
-    indices_for_heights = crystallized_state.indices_for_heights
-
-    shard_position = list(filter(
-        lambda x: (
-            indices_for_heights[attestation.slot - last_state_recalc + cycle_length][x].shard_id ==
-            attestation.shard_id
-        ),
-        range(len(indices_for_heights[attestation.slot - last_state_recalc + cycle_length]))
-    ))[0]
-    attestation_indices = (
-        indices_for_heights[
-            attestation.slot - last_state_recalc + cycle_length
-        ][shard_position].committee
-    )
-
-    return attestation_indices
 
 
 def validate_attestation(crystallized_state,
@@ -159,7 +107,7 @@ def validate_attestation(crystallized_state,
     return True
 
 
-def _update_block_vote_cache(crystallized_state,
+def get_updated_block_vote_cache(crystallized_state,
                              active_state,
                              attestation,
                              block,
@@ -207,7 +155,7 @@ def _process_block(crystallized_state,
                                     attestation,
                                     block,
                                     config)
-        new_block_vote_cache = _update_block_vote_cache(
+        new_block_vote_cache = get_updated_block_vote_cache(
             crystallized_state,
             active_state,
             attestation,
