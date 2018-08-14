@@ -19,6 +19,8 @@ class ActiveState():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
+        # block_vote_cache is not part of protocol state
+        # is used as a helper cache to aid in doing the cycle init calculations
         if 'block_vote_cache' in kwargs:
             self.block_vote_cache = kwargs['block_vote_cache']
         else:

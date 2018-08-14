@@ -108,11 +108,11 @@ def validate_attestation(crystallized_state,
 
 
 def get_updated_block_vote_cache(crystallized_state,
-                             active_state,
-                             attestation,
-                             block,
-                             block_vote_cache,
-                             config):
+                                 active_state,
+                                 attestation,
+                                 block,
+                                 block_vote_cache,
+                                 config):
     new_block_vote_cache = deepcopy(block_vote_cache)
 
     parent_hashes = get_parent_hashes(
@@ -190,16 +190,20 @@ def _process_updated_crosslinks(crystallized_state,
             attestation,
             config
         )
+        # find total committee size by balance
         committee_size = sum([
             crystallized_state.validators[index].balance
             for i, index in enumerate(attestation_indices)
         ])
+        # find votes cast in attestation by balance
         attestation_votes[shard_tuple] += sum([
             crystallized_state.validators[index].balance
             for i, index in enumerate(attestation_indices)
             if has_voted(attestation.attester_bitfield, i)
         ])
 
+        # if 2/3 of committee voted on crosslink and do no yet have crosslink
+        # for this shard, for this dynasty, add updated crosslink
         if (3 * attestation_votes[shard_tuple] >= 2 * committee_size and
                 crystallized_state.current_dynasty > crosslinks[attestation.shard_id].dynasty):
             crosslinks[attestation.shard_id] = CrosslinkRecord(
@@ -218,6 +222,8 @@ def _initialize_new_cycle(crystallized_state,
     last_justified_slot = crystallized_state.last_justified_slot
     last_finalized_slot = crystallized_state.last_finalized_slot
     justified_streak = crystallized_state.justified_streak
+    # walk through slots last_state_recalc - CYCLE_LENGTH ... last_state_recalc - 1
+    # and check for justification, streaks, and finality
     for i in range(cycle_length):
         slot = i + (last_state_recalc - cycle_length)
 
@@ -227,7 +233,6 @@ def _initialize_new_cycle(crystallized_state,
         else:
             vote_balance = 0
 
-        # need to make sure that `total_deposits` only accounts for active
         if 3 * vote_balance >= 2 * crystallized_state.total_deposits:
             last_justified_slot = max(last_justified_slot, slot)
             justified_streak += 1
@@ -243,6 +248,7 @@ def _initialize_new_cycle(crystallized_state,
         config
     )
 
+    # remove attestations older than last_state_recalc
     pending_attestations = [
         a for a in active_state.pending_attestations
         if a.slot >= last_state_recalc
@@ -322,6 +328,7 @@ def compute_state_transition(parent_state,
             config
         )
 
+    # process per block state changes
     active_state = _process_block(
         crystallized_state,
         active_state,
