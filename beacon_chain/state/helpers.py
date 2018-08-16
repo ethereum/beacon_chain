@@ -13,10 +13,10 @@ def is_power_of_two(num):
     return ((num & (num - 1)) == 0) and num != 0
 
 
-def get_parent_hashes(active_state,
-                      block,
-                      attestation,
-                      config=DEFAULT_CONFIG):
+def get_signed_parent_hashes(active_state,
+                             block,
+                             attestation,
+                             config=DEFAULT_CONFIG):
     cycle_length = config['cycle_length']
     oblique_parent_hashes = attestation.oblique_parent_hashes
 
@@ -64,9 +64,9 @@ def get_new_recent_block_hashes(old_block_hashes,
 
 def get_active_validator_indices(dynasty, validators):
     o = []
-    for i in range(len(validators)):
-        if (validators[i].start_dynasty <= dynasty and dynasty < validators[i].end_dynasty):
-            o.append(i)
+    for index, validator in enumerate(validators):
+        if (validator.start_dynasty <= dynasty and dynasty < validator.end_dynasty):
+            o.append(index)
     return o
 
 
@@ -94,8 +94,9 @@ def shuffle(lst,
 
 
 def split(lst, N):
+    list_length = len(lst)
     return [
-        lst[(len(lst) * i // N): (len(lst) * (i+1) // N)] for i in range(N)
+        lst[(list_length * i // N): (list_length * (i+1) // N)] for i in range(N)
     ]
 
 
@@ -117,12 +118,15 @@ def get_new_shuffling(validators,
                slots_per_committee < cycle_length):
             slots_per_committee *= 2
     o = []
-    for i, height_indices in enumerate(split(shuffle(avs, seed, config), cycle_length)):
+
+    shuffled_active_validator_indices = shuffle(avs, seed, config)
+    validators_per_slot = split(shuffled_active_validator_indices, cycle_length)
+    for slot, height_indices in enumerate(validators_per_slot):
         shard_indices = split(height_indices, committees_per_slot)
         o.append([ShardAndCommittee(
             shard_id=(
                 crosslinking_start_shard +
-                i * committees_per_slot // slots_per_committee + j
+                slot * committees_per_slot // slots_per_committee + j
             ),
             committee=indices
         ) for j, indices in enumerate(shard_indices)])

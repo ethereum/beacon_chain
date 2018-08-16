@@ -45,7 +45,7 @@ def test_num_pending_attestations(expected):
     ]
 )
 def test_block_vote_cache(block_vote_cache):
-    if block_vote_cache == None:
+    if block_vote_cache is None:
         active_state = ActiveState()
         assert active_state.block_vote_cache == {}
         return

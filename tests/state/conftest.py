@@ -34,7 +34,7 @@ from beacon_chain.state.state_transition import (
 )
 from beacon_chain.state.helpers import (
     get_new_shuffling,
-    get_parent_hashes,
+    get_signed_parent_hashes,
 )
 
 import beacon_chain.utils.bls
@@ -333,7 +333,7 @@ def mock_make_attestations(keymap, config):
             is_attesting[0] = True
 
             # Generating signatures and aggregating result
-            parent_hashes = get_parent_hashes(
+            parent_hashes = get_signed_parent_hashes(
                 active_state,
                 block,
                 attestation,

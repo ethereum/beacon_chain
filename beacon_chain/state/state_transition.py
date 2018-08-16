@@ -14,7 +14,7 @@ from .helpers import (
     get_active_validator_indices,
     get_attestation_indices,
     get_new_recent_block_hashes,
-    get_parent_hashes,
+    get_signed_parent_hashes,
 )
 
 import beacon_chain.utils.bls as bls
@@ -44,18 +44,16 @@ def validate_attestation(crystallized_state,
                          block,
                          config=DEFAULT_CONFIG):
     if not attestation.slot < block.slot_number:
-        print("Attestation slot number too high")
-        return False
+        raise Exception("Attestation slot number too high")
 
     if not (attestation.slot > block.slot_number - config['cycle_length']):
-        print("Attestation slot number too low:")
-        print(
+        raise Exception(
+            "Attestation slot number too low:\n"
             "\tFound: %s, Needed greater than: %s" %
             (attestation.slot, block.slot_number - config['cycle_length'])
         )
-        return False
 
-    parent_hashes = get_parent_hashes(
+    parent_hashes = get_signed_parent_hashes(
         active_state,
         block,
         attestation,
@@ -71,19 +69,17 @@ def validate_attestation(crystallized_state,
     # validate bitfield
     #
     if not (len(attestation.attester_bitfield) == get_bitfield_length(len(attestation_indices))):
-        print(
+        raise Exception(
             "Attestation has incorrect bitfield length. Found: %s, Expected: %s" %
             (len(attestation.attester_bitfield), get_bitfield_length(len(attestation_indices)))
         )
-        return False
 
     # check if end bits are zero
     last_bit = len(attestation_indices)
     if last_bit % 8 != 0:
         for i in range(8 - last_bit % 8):
             if has_voted(attestation.attester_bitfield, last_bit + i):
-                print("Attestation has non-zero trailing bits")
-                return False
+                raise Exception("Attestation has non-zero trailing bits")
 
     #
     # validate aggregate_sig
@@ -101,10 +97,7 @@ def validate_attestation(crystallized_state,
         attestation.shard_block_hash
     )
     if not bls.verify(message, bls.aggregate_pubs(pub_keys), attestation.aggregate_sig):
-        print("Attestation aggregate signature fails")
-        return False
-
-    return True
+        raise Exception("Attestation aggregate signature fails")
 
 
 def get_updated_block_vote_cache(crystallized_state,
@@ -115,7 +108,7 @@ def get_updated_block_vote_cache(crystallized_state,
                                  config):
     new_block_vote_cache = deepcopy(block_vote_cache)
 
-    parent_hashes = get_parent_hashes(
+    parent_hashes = get_signed_parent_hashes(
         active_state,
         block,
         attestation,
@@ -144,17 +137,17 @@ def get_updated_block_vote_cache(crystallized_state,
     return new_block_vote_cache
 
 
-def _process_block(crystallized_state,
+def process_block(crystallized_state,
                    active_state,
                    block,
                    config=DEFAULT_CONFIG):
     new_block_vote_cache = deepcopy(active_state.block_vote_cache)
     for attestation in block.attestations:
-        assert validate_attestation(crystallized_state,
-                                    active_state,
-                                    attestation,
-                                    block,
-                                    config)
+        validate_attestation(crystallized_state,
+                             active_state,
+                             attestation,
+                             block,
+                             config)
         new_block_vote_cache = get_updated_block_vote_cache(
             crystallized_state,
             active_state,
@@ -168,13 +161,13 @@ def _process_block(crystallized_state,
 
     new_active_state = ActiveState(
         pending_attestations=new_attestations,
-        recent_block_hashes=active_state.recent_block_hashes,
+        recent_block_hashes=active_state.recent_block_hashes[:],
         block_vote_cache=new_block_vote_cache
     )
     return new_active_state
 
 
-def _process_updated_crosslinks(crystallized_state,
+def process_updated_crosslinks(crystallized_state,
                                 active_state,
                                 config=DEFAULT_CONFIG):
     attestation_votes = {}
@@ -213,7 +206,7 @@ def _process_updated_crosslinks(crystallized_state,
     return crosslinks
 
 
-def _initialize_new_cycle(crystallized_state,
+def initialize_new_cycle(crystallized_state,
                           active_state,
                           block,
                           config=DEFAULT_CONFIG):
@@ -242,7 +235,7 @@ def _initialize_new_cycle(crystallized_state,
         if justified_streak >= cycle_length + 1:
             last_finalized_slot = max(last_finalized_slot, slot - config['cycle_length'] - 1)
 
-    crosslink_records = _process_updated_crosslinks(
+    crosslink_records = process_updated_crosslinks(
         crystallized_state,
         active_state,
         config
@@ -283,7 +276,7 @@ def _initialize_new_cycle(crystallized_state,
 
     new_active_state = ActiveState(
         pending_attestations=pending_attestations,
-        recent_block_hashes=deepcopy(active_state.recent_block_hashes),
+        recent_block_hashes=active_state.recent_block_hashes[:],
         # Should probably clean up block_vote_cache but old records won't break cache
         # so okay for now
         block_vote_cache=deepcopy(active_state.block_vote_cache)
@@ -292,12 +285,11 @@ def _initialize_new_cycle(crystallized_state,
     return new_crystallized_state, new_active_state
 
 
-def _fill_recent_block_hashes(active_state,
-                              parent_block,
-                              block,
-                              config=DEFAULT_CONFIG):
+def fill_recent_block_hashes(active_state,
+                             parent_block,
+                             block):
     return ActiveState(
-        pending_attestations=[a for a in active_state.pending_attestations],
+        pending_attestations=deepcopy(active_state.pending_attestations),
         recent_block_hashes=get_new_recent_block_hashes(
             active_state.recent_block_hashes,
             parent_block.slot_number,
@@ -317,11 +309,11 @@ def compute_state_transition(parent_state,
     assert validate_block(block)
 
     # Update active state to fill any missing hashes with parent block hash
-    active_state = _fill_recent_block_hashes(active_state, parent_block, block, config)
+    active_state = fill_recent_block_hashes(active_state, parent_block, block)
 
     # Initialize a new cycle if needed
     if block.slot_number >= (crystallized_state.last_state_recalc + config['cycle_length']):
-        crystallized_state, active_state = _initialize_new_cycle(
+        crystallized_state, active_state = initialize_new_cycle(
             crystallized_state,
             active_state,
             block,
@@ -329,7 +321,7 @@ def compute_state_transition(parent_state,
         )
 
     # process per block state changes
-    active_state = _process_block(
+    active_state = process_block(
         crystallized_state,
         active_state,
         block,
