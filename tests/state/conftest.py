@@ -246,10 +246,10 @@ def genesis_crystallized_state(genesis_validators,
     validators = genesis_validators
 
     indices_for_heights = get_new_shuffling(
+        init_shuffling_seed,
         validators,
         current_dynasty,
         crosslinking_start_shard,
-        init_shuffling_seed,
         config
     )
     # concatenate with itself to span 2*CYCLE_LENGTH
@@ -265,7 +265,7 @@ def genesis_crystallized_state(genesis_validators,
         current_dynasty=current_dynasty,
         crosslinking_start_shard=crosslinking_start_shard,
         crosslink_records=[
-            CrosslinkRecord(hash=b'\x00'*32, dynasty=0) for i in range(SHARD_COUNT)
+            CrosslinkRecord(hash=b'\x00'*32, dynasty=0) for i in range(config['shard_count'])
         ],
         total_deposits=config['deposit_size']*len(validators),
         dynasty_seed=init_shuffling_seed,

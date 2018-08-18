@@ -20,10 +20,10 @@ def test_get_new_shuffling_is_complete(genesis_validators, config):
     dynasty = 1
 
     shuffling = get_new_shuffling(
+        b'\x35'*32,
         genesis_validators,
         dynasty,
         0,
-        b'\x35'*32,
         config
     )
 

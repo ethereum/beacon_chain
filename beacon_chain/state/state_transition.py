@@ -168,15 +168,15 @@ def process_block(crystallized_state,
 
 
 def process_updated_crosslinks(crystallized_state,
-                                active_state,
-                                config=DEFAULT_CONFIG):
-    attestation_votes = {}
-    crosslinks = [c for c in crystallized_state.crosslink_records]
+                               active_state,
+                               config=DEFAULT_CONFIG):
+    total_attestation_balance = {}
+    crosslinks = deepcopy(crystallized_state.crosslink_records)
 
     for attestation in active_state.pending_attestations:
         shard_tuple = (attestation.shard_id, attestation.shard_block_hash)
-        if shard_tuple not in attestation_votes:
-            attestation_votes[shard_tuple] = 0
+        if shard_tuple not in total_attestation_balance:
+            total_attestation_balance[shard_tuple] = 0
 
         attestation_indices = get_attestation_indices(
             crystallized_state,
@@ -184,20 +184,20 @@ def process_updated_crosslinks(crystallized_state,
             config
         )
         # find total committee size by balance
-        committee_size = sum([
+        total_committee_balance = sum([
             crystallized_state.validators[index].balance
-            for i, index in enumerate(attestation_indices)
+            for index in attestation_indices
         ])
         # find votes cast in attestation by balance
-        attestation_votes[shard_tuple] += sum([
+        total_attestation_balance[shard_tuple] += sum([
             crystallized_state.validators[index].balance
-            for i, index in enumerate(attestation_indices)
-            if has_voted(attestation.attester_bitfield, i)
+            for in_cycle_slot_height, index in enumerate(attestation_indices)
+            if has_voted(attestation.attester_bitfield, in_cycle_slot_height)
         ])
 
         # if 2/3 of committee voted on crosslink and do no yet have crosslink
         # for this shard, for this dynasty, add updated crosslink
-        if (3 * attestation_votes[shard_tuple] >= 2 * committee_size and
+        if (3 * total_attestation_balance[shard_tuple] >= 2 * total_committee_balance and
                 crystallized_state.current_dynasty > crosslinks[attestation.shard_id].dynasty):
             crosslinks[attestation.shard_id] = CrosslinkRecord(
                 dynasty=crystallized_state.current_dynasty,
@@ -207,9 +207,9 @@ def process_updated_crosslinks(crystallized_state,
 
 
 def initialize_new_cycle(crystallized_state,
-                          active_state,
-                          block,
-                          config=DEFAULT_CONFIG):
+                         active_state,
+                         block,
+                         config=DEFAULT_CONFIG):
     cycle_length = config['cycle_length']
     last_state_recalc = crystallized_state.last_state_recalc
     last_justified_slot = crystallized_state.last_justified_slot
@@ -233,7 +233,7 @@ def initialize_new_cycle(crystallized_state,
             justified_streak = 0
 
         if justified_streak >= cycle_length + 1:
-            last_finalized_slot = max(last_finalized_slot, slot - config['cycle_length'] - 1)
+            last_finalized_slot = max(last_finalized_slot, slot - cycle_length - 1)
 
     crosslink_records = process_updated_crosslinks(
         crystallized_state,
