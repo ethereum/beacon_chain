@@ -16,7 +16,7 @@ class CrystallizedState():
         # The last justified slot
         'last_justified_slot': 'int64',
         # Number of consecutive justified slots ending at this one
-        'justified_streak': 'int16',
+        'justified_streak': 'int64',
         # The last finalized slot
         'last_finalized_slot': 'int64',
         # The current dynasty
