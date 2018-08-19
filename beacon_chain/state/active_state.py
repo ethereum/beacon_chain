@@ -1,33 +1,17 @@
-from .partial_crosslink_record import PartialCrosslinkRecord
-from .recent_proposer_record import RecentProposerRecord
+from .attestation_record import AttestationRecord
 
 
 class ActiveState():
 
     fields = {
-        # Block height
-        'height': 'int64',
-        # Global RANDAO beacon state
-        'randao': 'hash32',
-        # Which validators have made FFG votes this epoch (as a bitfield)
-        'ffg_voter_bitfield': 'bytes',
-        # Block attesters in the last epoch
-        'recent_attesters': ['int24'],
-        # Storing data about crosslinks-in-progress attempted in this epoch
-        'partial_crosslinks': [PartialCrosslinkRecord],
-        # Total number of skips (used to determine minimum timestamp)
-        'total_skip_count': 'int64',
-        # Block proposers in the last epoch
-        'recent_proposers': [RecentProposerRecord]
+        # Attestations that have not yet been processed
+        'pending_attestations': [AttestationRecord],
+        # Most recent 2*CYCLE_LENGTH block hashes, older to newer
+        'recent_block_hashes': ['hash32'],
     }
     defaults = {
-        'height': 0,
-        'randao': b'\x00'*32,
-        'ffg_voter_bitfield': b'',
-        'recent_attesters': [],
-        'partial_crosslinks': [],
-        'total_skip_count': 0,
-        'recent_proposers': []
+        'pending_attestations': [],
+        'recent_block_hashes': [],
     }
 
     def __init__(self, **kwargs):
@@ -35,10 +19,13 @@ class ActiveState():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
-    @property
-    def num_recent_attesters(self):
-        return len(self.recent_attesters)
+        # block_vote_cache is not part of protocol state
+        # is used as a helper cache to aid in doing the cycle init calculations
+        if 'block_vote_cache' in kwargs:
+            self.block_vote_cache = kwargs['block_vote_cache']
+        else:
+            self.block_vote_cache = {}
 
     @property
-    def num_recent_proposers(self):
-        return len(self.recent_proposers)
+    def num_pending_attestations(self):
+        return len(self.pending_attestations)

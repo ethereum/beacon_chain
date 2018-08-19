@@ -1,16 +1,14 @@
-
-class AggregateVote():
+class ShardAndCommittee():
     fields = {
+        # The shard ID
         'shard_id': 'int16',
-        'shard_block_hash': 'hash32',
-        'notary_bitfield': 'bytes',
-        'aggregate_sig': ['int256']
+        # Validator indices
+        'committee': ['int24'],
     }
+
     defaults = {
         'shard_id': 0,
-        'shard_block_hash': b'\x00'*32,
-        'notary_bitfield': b'',
-        'aggregate_sig': [0, 0],
+        'committee': [],
     }
 
     def __init__(self, **kwargs):

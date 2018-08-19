@@ -24,3 +24,13 @@ def get_vote_count(bitfield):
         if has_voted(bitfield, index):
             votes += 1
     return votes
+
+
+def or_bitfields(bitfields):
+    new = b''
+    for i in range(len(bitfields[0])):
+        byte = 0
+        for bitfield in bitfields:
+            byte = bitfield[i] | byte
+        new += bytes([byte])
+    return new

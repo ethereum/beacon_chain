@@ -1,3 +1,5 @@
+import pytest
+
 from beacon_chain.state.crystallized_state import (
     CrystallizedState,
 )
@@ -10,32 +12,51 @@ from tests.state.helpers import (
 )
 
 
-def test_num_properties(config):
-    active_validators = [
-        mock_validator_record(pubkey, config)
-        for pubkey in range(2)
+@pytest.mark.parametrize(
+    'param,default_value',
+    [
+        ('validators', []),
+        ('last_state_recalc', 0),
+        ('indices_for_heights', []),
+        ('last_justified_slot', 0),
+        ('justified_streak', 0),
+        ('last_finalized_slot', 0),
+        ('current_dynasty', 0),
+        ('crosslinking_start_shard', 0),
+        ('crosslink_records', []),
+        ('total_deposits', 0),
+        ('dynasty_seed', b'\x00'*32),
+        ('dynasty_seed_last_reset', 0),
     ]
-    queued_validators = [
-        mock_validator_record(pubkey, config)
-        for pubkey in range(3)
-    ]
-    exited_validators = [
-        mock_validator_record(pubkey, config)
-        for pubkey in range(4)
-    ]
-    crosslink_records = [
-        CrosslinkRecord(hash=b'\x00'*32, epoch=0) for i in range(5)
-    ]
+)
+def test_defaults(param, default_value, sample_crystallized_state_params):
+    del sample_crystallized_state_params[param]
+    crystallized_state = CrystallizedState(**sample_crystallized_state_params)
 
+    assert getattr(crystallized_state, param) == default_value
+
+
+@pytest.mark.parametrize(
+    'expected', [(0), (1), (5)]
+)
+def test_num_validators(expected):
+    validators = [mock_validator_record(pubkey) for pubkey in range(expected)]
     crystallized_state = CrystallizedState(
-        active_validators=active_validators,
-        queued_validators=queued_validators,
-        exited_validators=exited_validators,
-        current_shuffling=active_validators,
+        validators=validators,
+    )
+
+    assert crystallized_state.num_validators == expected
+
+
+@pytest.mark.parametrize(
+    'expected', [(0), (1), (5)]
+)
+def test_num_crosslink_records(expected):
+    crosslink_records = [
+        CrosslinkRecord() for i in range(expected)
+    ]
+    crystallized_state = CrystallizedState(
         crosslink_records=crosslink_records,
     )
 
-    assert crystallized_state.num_active_validators == 2
-    assert crystallized_state.num_queued_validators == 3
-    assert crystallized_state.num_exited_validators == 4
-    assert crystallized_state.num_crosslink_records == 5
+    assert crystallized_state.num_crosslink_records == expected

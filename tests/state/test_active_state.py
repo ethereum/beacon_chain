@@ -2,26 +2,18 @@ import pytest
 
 
 from beacon_chain.state.active_state import (
-    ActiveState
+    ActiveState,
 )
-from beacon_chain.state.recent_proposer_record import (
-    RecentProposerRecord
-)
-from beacon_chain.utils.simpleserialize import (
-    eq
+from beacon_chain.state.attestation_record import (
+    AttestationRecord,
 )
 
 
 @pytest.mark.parametrize(
     'param,default_value',
     [
-        ('height', 0),
-        ('randao', b'\x00'*32),
-        ('ffg_voter_bitfield', b''),
-        ('recent_attesters', []),
-        ('partial_crosslinks', []),
-        ('total_skip_count', 0),
-        ('recent_proposers', []),
+        ('pending_attestations', []),
+        ('recent_block_hashes', []),
     ]
 )
 def test_defaults(param, default_value, sample_active_state_params):
@@ -31,24 +23,32 @@ def test_defaults(param, default_value, sample_active_state_params):
     assert getattr(active_state, param) == default_value
 
 
-def test_recent_proposers(sample_active_state_params,
-                          sample_recent_proposer_record_params):
-    recent_proposer = RecentProposerRecord(**sample_recent_proposer_record_params)
-    sample_active_state_params['recent_proposers'] = [recent_proposer]
-
-    active_state = ActiveState(**sample_active_state_params)
-    assert active_state.num_recent_proposers == 1
-    assert eq(active_state.recent_proposers[0], recent_proposer)
-
-
-def test_num_properties():
-    activate_state = ActiveState(
-        recent_attesters=[1, 2],
-        recent_proposers=[
-            RecentProposerRecord(index=index)
-            for index in range(3)
-        ]
+@pytest.mark.parametrize(
+    'expected', [(0), (1), (5)]
+)
+def test_num_pending_attestations(expected):
+    attestations = [AttestationRecord() for i in range(expected)]
+    active_state = ActiveState(
+        pending_attestations=attestations,
     )
 
-    assert activate_state.num_recent_attesters == 2
-    assert activate_state.num_recent_proposers == 3
+    assert active_state.num_pending_attestations == expected
+
+
+@pytest.mark.parametrize(
+    'block_vote_cache',
+    [
+        (None),
+        ({}),
+        ({'a': 'b'}),
+        ({1: 10, 10: 100})
+    ]
+)
+def test_block_vote_cache(block_vote_cache):
+    if block_vote_cache is None:
+        active_state = ActiveState()
+        assert active_state.block_vote_cache == {}
+        return
+
+    active_state = ActiveState(block_vote_cache=block_vote_cache)
+    assert active_state.block_vote_cache == block_vote_cache

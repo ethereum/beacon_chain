@@ -86,6 +86,10 @@ def deepcopy(x):
         return x.__class__(**vals)
     elif isinstance(x, list):
         return [deepcopy(y) for y in x]
+    elif isinstance(x, dict):
+        return {key: deepcopy(x[key]) for key in x}
+    elif isinstance(x, set):
+        return {deepcopy(y) for y in x}
     else:
         return x
 

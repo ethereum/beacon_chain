@@ -1,109 +1,41 @@
 import pytest
 
 from beacon_chain.state.helpers import (
-    get_crosslink_shards,
-    get_crosslink_notaries,
-    get_crosslink_shards_count,
+    get_new_shuffling
 )
-
-from tests.state.helpers import (
-    mock_crystallized_state,
-    mock_validator_record,
-)
-
-@pytest.mark.parametrize(
-    'active_validators_count, shard_count, notaries_per_crosslink, expected',
-    (
-        (1000, 20, 100, 10),
-        (10000, 20, 100, 20),
-        (50, 100, 3, 16),
-    )
-)
-def test_get_crosslink_shards_count(active_validators_count,
-                                    shard_count,
-                                    notaries_per_crosslink,
-                                    expected,
-                                    config):
-    crosslink_shards_count = get_crosslink_shards_count(
-        active_validators_count,
-        config=config,
-    )
-    assert crosslink_shards_count == expected
 
 
 @pytest.mark.parametrize(
-    'next_shard,shard_count,notaries_per_crosslink,num_validators,expected',
     (
-        (0, 20, 100, 1000, list(range(0, 10))),
-        (10, 20, 100, 1000, list(range(10, 20))),
-        (19, 20, 100, 1000, [19] + list(range(0, 9))),
-        (10, 20, 100, 10001, list(range(10, 20)) + list(range(0, 10))),
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,shard_count'
     ),
-    ids=[
-        'next_shard=0, 1000 validators',
-        'next_shard=10, 1000 validators',
-        'next_shard=19, 1000 validators',
-        'next_shard=10, 10001 validators',
+    [
+        (1000, 1000, 20, 10, 100),
+        (100, 500, 50, 10, 10),
+        (20, 100, 10, 3, 10),
     ],
 )
-def test_get_crosslink_shards_and_get_crosslink_notaries(
-        genesis_crystallized_state,
-        init_shuffling_seed,
-        next_shard,
-        shard_count,
-        notaries_per_crosslink,
-        num_validators,
-        expected,
-        config):
-    active_validators = [
-        mock_validator_record(pubkey, config)
-        for pubkey in range(num_validators)
-    ]
-    crystallized_state = mock_crystallized_state(
-        genesis_crystallized_state,
-        init_shuffling_seed,
-        next_shard,
-        active_validators,
-        config=config,
-    )
-    crosslink_shard_count = get_crosslink_shards_count(
-        crystallized_state.num_active_validators
+def test_get_new_shuffling_is_complete(genesis_validators, config):
+    dynasty = 1
+
+    shuffling = get_new_shuffling(
+        b'\x35'*32,
+        genesis_validators,
+        dynasty,
+        0,
+        config
     )
 
-    # test get_crosslink_shards
-    crosslink_shards = get_crosslink_shards(
-        crystallized_state,
-        config=config,
-    )
-    assert crosslink_shards[0] == next_shard
-    assert crosslink_shards == expected
+    assert len(shuffling) == config['cycle_length']
 
-    # test get_crosslink_notaries
-    notaries = get_crosslink_notaries(
-        crystallized_state,
-        next_shard,
-        config=config,
-    )
-    assert len(notaries) == \
-        crystallized_state.num_active_validators // crosslink_shard_count
+    validators = set()
+    shards = set()
+    for height_indices in shuffling:
+        for shard_and_committee in height_indices:
+            shards.add(shard_and_committee.shard_id)
+            for vi in shard_and_committee.committee:
+                validators.add(vi)
 
-
-@pytest.mark.parametrize(
-    'next_shard, shard_count, exception',
-    [
-        (21, 20, ValueError)
-    ]
-)
-def test_get_crosslink_shards_error(genesis_crystallized_state,
-                                    init_shuffling_seed,
-                                    next_shard,
-                                    shard_count,
-                                    exception,
-                                    config):
-    crystallized_state = mock_crystallized_state(
-        genesis_crystallized_state,
-        init_shuffling_seed,
-        next_shard
-    )
-    with pytest.raises(exception):
-        get_crosslink_shards(crystallized_state, config=config)
+    # assert len(shards) == config['shard_count']
+    assert len(validators) == len(genesis_validators)

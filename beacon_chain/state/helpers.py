@@ -1,72 +1,133 @@
 from beacon_chain.state.config import (
     DEFAULT_CONFIG,
 )
+from beacon_chain.state.shard_and_committee import (
+    ShardAndCommittee,
+)
+from beacon_chain.utils.blake import (
+    blake,
+)
 
 
-def get_crosslink_shards_count(active_validators_count, config=DEFAULT_CONFIG):
-    """Returns how many shards in the `crosslink_shards` list
-    """
-    shard_count = config['shard_count']
-    crosslink_shards_count = (
-        active_validators_count // config['notaries_per_crosslink']
+def is_power_of_two(num):
+    return ((num & (num - 1)) == 0) and num != 0
+
+
+def get_signed_parent_hashes(active_state,
+                             block,
+                             attestation,
+                             config=DEFAULT_CONFIG):
+    cycle_length = config['cycle_length']
+    oblique_parent_hashes = attestation.oblique_parent_hashes
+
+    parent_hashes = (
+        active_state.recent_block_hashes[
+            cycle_length + attestation.slot - block.slot_number:
+            cycle_length * 2 + attestation.slot - block.slot_number - len(oblique_parent_hashes)
+        ] +
+        oblique_parent_hashes
+
     )
-    if crosslink_shards_count > shard_count:
-        crosslink_shards_count = shard_count
-    return crosslink_shards_count
+    return parent_hashes
 
 
-def get_crosslink_shards(crystallized_state, config=DEFAULT_CONFIG):
-    """Returns a list of shards that will be crosslinking
-    """
-    shard_count = config['shard_count']
-    start_from = crystallized_state.next_shard
-    if start_from >= shard_count:
-        raise ValueError(
-            'start_from %d is larger than SHARD_COUNT %d',
-            start_from,
-            shard_count,
-        )
+def get_attestation_indices(crystallized_state,
+                            attestation,
+                            config=DEFAULT_CONFIG):
+    last_state_recalc = crystallized_state.last_state_recalc
+    cycle_length = config['cycle_length']
+    indices_for_heights = crystallized_state.indices_for_heights
 
-    crosslink_shards_count = get_crosslink_shards_count(
-        crystallized_state.num_active_validators,
-        config=config,
+    shard_position = list(filter(
+        lambda x: (
+            indices_for_heights[attestation.slot - last_state_recalc + cycle_length][x].shard_id ==
+            attestation.shard_id
+        ),
+        range(len(indices_for_heights[attestation.slot - last_state_recalc + cycle_length]))
+    ))[0]
+    attestation_indices = (
+        indices_for_heights[
+            attestation.slot - last_state_recalc + cycle_length
+        ][shard_position].committee
     )
 
-    if start_from + crosslink_shards_count <= shard_count:
-        return list(range(start_from, start_from + crosslink_shards_count))
+    return attestation_indices
+
+
+def get_new_recent_block_hashes(old_block_hashes,
+                                parent_slot,
+                                current_slot,
+                                parent_hash):
+    d = current_slot - parent_slot
+    return old_block_hashes[d:] + [parent_hash] * min(d, len(old_block_hashes))
+
+
+def get_active_validator_indices(dynasty, validators):
+    o = []
+    for index, validator in enumerate(validators):
+        if (validator.start_dynasty <= dynasty and dynasty < validator.end_dynasty):
+            o.append(index)
+    return o
+
+
+def shuffle(lst,
+            seed,
+            config=DEFAULT_CONFIG):
+    lst_count = len(lst)
+    assert lst_count <= 16777216
+    o = [x for x in lst]
+    source = seed
+    i = 0
+    while i < lst_count:
+        source = blake(source)
+        for pos in range(0, 30, 3):
+            m = int.from_bytes(source[pos:pos+3], 'big')
+            remaining = lst_count - i
+            if remaining == 0:
+                break
+            rand_max = 16777216 - 16777216 % remaining
+            if m < rand_max:
+                replacement_pos = (m % remaining) + i
+                o[i], o[replacement_pos] = o[replacement_pos], o[i]
+                i += 1
+    return o
+
+
+def split(lst, N):
+    list_length = len(lst)
+    return [
+        lst[(list_length * i // N): (list_length * (i+1) // N)] for i in range(N)
+    ]
+
+
+def get_new_shuffling(seed,
+                      validators,
+                      dynasty,
+                      crosslinking_start_shard,
+                      config=DEFAULT_CONFIG):
+    cycle_length = config['cycle_length']
+    min_committee_size = config['min_committee_size']
+    avs = get_active_validator_indices(dynasty, validators)
+    if len(avs) >= cycle_length * min_committee_size:
+        committees_per_slot = int(len(avs) // cycle_length // (min_committee_size * 2)) + 1
+        slots_per_committee = 1
     else:
-        result = (
-            list(range(start_from, shard_count)) +
-            list(range(start_from + crosslink_shards_count - shard_count))
-        )
-        return result
+        committees_per_slot = 1
+        slots_per_committee = 1
+        while (len(avs) * slots_per_committee < cycle_length * min_committee_size and
+               slots_per_committee < cycle_length):
+            slots_per_committee *= 2
+    o = []
 
-
-def get_crosslink_notaries(
-        crystallized_state,
-        shard_id,
-        crosslink_shards=None,
-        config=DEFAULT_CONFIG):
-    """Returns a list of notaries that will notarize `shard_id`
-    """
-    if crosslink_shards is None:
-        crosslink_shards = get_crosslink_shards(
-            crystallized_state,
-            config=config,
-        )
-    num_crosslink_shards = len(crosslink_shards)
-
-    if shard_id not in crosslink_shards:
-        return None
-
-    num_active_validators = crystallized_state.num_active_validators
-
-    start = (
-        num_active_validators * crosslink_shards.index(shard_id) //
-        num_crosslink_shards
-    )
-    end = (
-        num_active_validators * (crosslink_shards.index(shard_id) + 1) //
-        num_crosslink_shards
-    )
-    return crystallized_state.current_shuffling[start:end]
+    shuffled_active_validator_indices = shuffle(avs, seed, config)
+    validators_per_slot = split(shuffled_active_validator_indices, cycle_length)
+    for slot, height_indices in enumerate(validators_per_slot):
+        shard_indices = split(height_indices, committees_per_slot)
+        o.append([ShardAndCommittee(
+            shard_id=(
+                crosslinking_start_shard +
+                slot * committees_per_slot // slots_per_committee + j
+            ),
+            committee=indices
+        ) for j, indices in enumerate(shard_indices)])
+    return o
