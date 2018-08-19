@@ -1,8 +1,8 @@
 try:
-    from hashlib import blake2s
+    from hashlib import blake2b
 except:
-    from pyblake2 import blake2s
+    from pyblake2 import blake2b
 
 
 def blake(x):
-    return blake2s(x).digest()
+    return blake2b(x).digest()[:32]
