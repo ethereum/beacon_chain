@@ -10,6 +10,10 @@ from beacon_chain.state.helpers import (
     get_block_hash,
 )
 
+from tests.state.helpers import(
+    get_pseudo_chain,
+)
+
 
 @pytest.mark.parametrize(
     (
@@ -34,12 +38,6 @@ def test_get_new_shuffling_is_complete(genesis_validators, config):
     )
 
     assert len(shuffling) == config['cycle_length']
-    print([
-        [j.committee 
-        for j in item]
-        for item in shuffling]
-    )
-    print('shuffling: {}'.format(shuffling))
     validators = set()
     shards = set()
     for height_indices in shuffling:
@@ -103,7 +101,7 @@ def test_get_block_hash(
         config):
     cycle_length = config['cycle_length']
 
-    blocks = get_empty_chain(cycle_length * 3)
+    blocks = get_pseudo_chain(cycle_length * 3)
     active_state = ActiveState(
         recent_block_hashes=[block.hash for block in blocks[:cycle_length*2]]
     )
@@ -123,16 +121,3 @@ def test_get_block_hash(
                 slot,
                 config=config,
             )
-
-
-def get_empty_chain(length):
-    blocks = []
-    for slot in range(length * 3):
-        blocks.append(
-            Block(
-                slot_number=slot,
-                parent_hash=blocks[slot-1].hash if slot > 0 else b'00'*32
-            )
-        )
-
-    return blocks
