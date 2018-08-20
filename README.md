@@ -5,7 +5,12 @@
 ## Installation
 Using a python3 environment, run the following to install required libraries:
 ```
-pip install -r requirements.txt
+make build
+```
+
+## Deploy
+```
+make deploy
 ```
 
 NOTE: We suggest using virtualenv to sandbox your setup.
