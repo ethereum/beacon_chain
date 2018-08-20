@@ -17,7 +17,7 @@ class CrystallizedState():
         # What active validators are part of the attester set
         # at what height, and in what shard. Starts at slot
         # last_state_recalc - CYCLE_LENGTH
-        'indices_for_heights': [[ShardAndCommittee]],
+        'indices_for_slots': [[ShardAndCommittee]],
         # The last justified slot
         'last_justified_slot': 'int64',
         # Number of consecutive justified slots ending at this one
@@ -40,7 +40,7 @@ class CrystallizedState():
     defaults = {
         'validators': [],
         'last_state_recalc': 0,
-        'indices_for_heights': [],
+        'indices_for_slots': [],
         'last_justified_slot': 0,
         'justified_streak': 0,
         'last_finalized_slot': 0,

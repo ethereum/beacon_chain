@@ -36,17 +36,17 @@ def get_attestation_indices(crystallized_state,
                             config=DEFAULT_CONFIG):
     last_state_recalc = crystallized_state.last_state_recalc
     cycle_length = config['cycle_length']
-    indices_for_heights = crystallized_state.indices_for_heights
+    indices_for_slots = crystallized_state.indices_for_slots
 
     shard_position = list(filter(
         lambda x: (
-            indices_for_heights[attestation.slot - last_state_recalc + cycle_length][x].shard_id ==
+            indices_for_slots[attestation.slot - last_state_recalc + cycle_length][x].shard_id ==
             attestation.shard_id
         ),
-        range(len(indices_for_heights[attestation.slot - last_state_recalc + cycle_length]))
+        range(len(indices_for_slots[attestation.slot - last_state_recalc + cycle_length]))
     ))[0]
     attestation_indices = (
-        indices_for_heights[
+        indices_for_slots[
             attestation.slot - last_state_recalc + cycle_length
         ][shard_position].committee
     )

@@ -271,17 +271,17 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
     dynasty_seed_last_reset = crystallized_state.dynasty_seed_last_reset  # STUB
     crosslinking_start_shard = 0  # stub. Needs to see where this epoch left off
     validators = deepcopy(crystallized_state.validators)  # STUB
-    indices_for_heights = (
-        crystallized_state.indices_for_heights[cycle_length:] +
+    indices_for_slots = (
+        crystallized_state.indices_for_slots[cycle_length:] +
         # this is a stub and will be addressed by shuffling at dynasty change
-        crystallized_state.indices_for_heights[cycle_length:]
+        crystallized_state.indices_for_slots[cycle_length:]
     )
     active_validator_indices = get_active_validator_indices(dynasty, validators)
 
     new_crystallized_state = CrystallizedState(
         validators=validators,
         last_state_recalc=last_state_recalc + cycle_length,
-        indices_for_heights=indices_for_heights,
+        indices_for_slots=indices_for_slots,
         last_justified_slot=last_justified_slot,
         justified_streak=justified_streak,
         last_finalized_slot=last_finalized_slot,
