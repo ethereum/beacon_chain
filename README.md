@@ -5,12 +5,7 @@
 ## Installation
 Using a python3 environment, run the following to install required libraries:
 ```
-make build
-```
-
-## Deploy
-```
-make deploy
+pip install -r requirements.txt
 ```
 
 NOTE: We suggest using virtualenv to sandbox your setup.
@@ -21,3 +16,10 @@ pytest tests
 ```
 
 Run with `-s` option for detailed log output
+
+
+## Installation through Docker
+```
+make build
+make deploy
+```
