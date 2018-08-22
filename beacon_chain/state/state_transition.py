@@ -4,7 +4,6 @@ from typing import (
     List,
     NewType,
     Tuple,
-    Type,
     TYPE_CHECKING,
     Union,
 )
@@ -41,8 +40,8 @@ from .helpers import (
 )
 
 if TYPE_CHECKING:
-    from .attesation_record import AttestationRecord
-    from .block import Block
+    from .attesation_record import AttestationRecord  # noqa: F401
+    from .block import Block  # noqa: F401
 
 BlockVoteCache = Dict[str, Dict[str, Union[str, bytes, int]]]
 Hash32 = NewType('Hash32', bytes)
@@ -61,7 +60,7 @@ def validate_attestation(crystallized_state: CrystallizedState,
                          active_state: ActiveState,
                          attestation: 'AttestationRecord',
                          block: 'Block',
-                         config: dict = DEFAULT_CONFIG) -> None:
+                         config: Dict[str, Any]=DEFAULT_CONFIG) -> None:
     if not attestation.slot < block.slot_number:
         raise Exception("Attestation slot number too high")
 
@@ -124,7 +123,7 @@ def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
                                  attestation: 'AttestationRecord',
                                  block: 'Block',
                                  block_vote_cache: BlockVoteCache,
-                                 config: dict = DEFAULT_CONFIG) -> BlockVoteCache:
+                                 config: Dict[str, Any]=DEFAULT_CONFIG) -> BlockVoteCache:
     new_block_vote_cache = deepcopy(block_vote_cache)
 
     parent_hashes = get_signed_parent_hashes(
@@ -188,7 +187,7 @@ def process_block(crystallized_state: CrystallizedState,
 
 def process_updated_crosslinks(crystallized_state: CrystallizedState,
                                active_state: ActiveState,
-                               config: dict = DEFAULT_CONFIG) -> List[CrosslinkRecord]:
+                               config: Dict[str, Any]=DEFAULT_CONFIG) -> List[CrosslinkRecord]:
     total_attestation_balance = {}  # type: Dict[Tuple[ShardId, Hash32], int]
 
     crosslinks = deepcopy(crystallized_state.crosslink_records)
@@ -229,7 +228,7 @@ def process_updated_crosslinks(crystallized_state: CrystallizedState,
 def initialize_new_cycle(crystallized_state: CrystallizedState,
                          active_state: ActiveState,
                          block: 'Block',
-                         config: dict = DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
+                         config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     cycle_length = config['cycle_length']
     last_state_recalc = crystallized_state.last_state_recalc
     last_justified_slot = crystallized_state.last_justified_slot
@@ -323,7 +322,7 @@ def fill_recent_block_hashes(active_state: ActiveState,
 def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState],
                              parent_block: 'Block',
                              block: 'Block',
-                             config: dict = DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
+                             config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     crystallized_state, active_state = parent_state
 
     assert validate_block(block)

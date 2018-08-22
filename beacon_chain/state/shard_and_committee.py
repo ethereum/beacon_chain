@@ -1,6 +1,8 @@
-from typing import (
+from typing import (  # noqa: F401
     Any,
+    Dict,
 )
+
 
 class ShardAndCommittee():
     fields = {
@@ -13,7 +15,7 @@ class ShardAndCommittee():
     defaults = {
         'shard_id': 0,
         'committee': [],
-    }
+    }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():

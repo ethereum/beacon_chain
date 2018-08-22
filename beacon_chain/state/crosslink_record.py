@@ -1,5 +1,6 @@
-from typing import (
+from typing import (  # noqa: F401
     Any,
+    Dict,
 )
 
 
@@ -13,7 +14,7 @@ class CrosslinkRecord():
     defaults = {
         'dynasty': 0,
         'hash': b'\x00'*32
-    }
+    }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():

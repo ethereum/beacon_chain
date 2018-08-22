@@ -1,5 +1,6 @@
-from typing import (
+from typing import (  # noqa: F401
     Any,
+    Dict,
 )
 
 
@@ -19,7 +20,7 @@ class AttestationRecord():
         'shard_block_hash': b'\x00'*32,
         'attester_bitfield': b'',
         'aggregate_sig': [0, 0],
-    }
+    }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():

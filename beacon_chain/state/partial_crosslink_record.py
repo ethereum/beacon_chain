@@ -1,5 +1,6 @@
-from typing import (
+from typing import (  # noqa: F401
     Any,
+    Dict,
 )
 
 
@@ -17,7 +18,7 @@ class PartialCrosslinkRecord():
         'shard_id': 0,
         'shard_block_hash': b'\x00'*32,
         'voter_bitfield': b'',
-    }
+    }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():

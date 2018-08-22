@@ -1,7 +1,5 @@
 from typing import (
     NewType,
-    TypeVar,
-    Union,
 )
 
 

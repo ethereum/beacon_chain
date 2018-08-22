@@ -1,5 +1,6 @@
-from typing import (
+from typing import (  # noqa: F401
     Any,
+    Dict,
 )
 
 from beacon_chain.utils.blake import blake
@@ -24,7 +25,7 @@ class Block():
         'active_state_root': 'hash32',
         # Hash of the crystallized state
         'crystallized_state_root': 'hash32',
-    }
+    }  # type: Dict[str, Any]
 
     defaults = {
         'parent_hash': b'\x00'*32,

@@ -1,5 +1,6 @@
-from typing import (
+from typing import (  # noqa: F401
     Any,
+    Dict,
 )
 
 from .crosslink_record import CrosslinkRecord
@@ -49,7 +50,7 @@ class CrystallizedState():
         'total_deposits': 0,
         'dynasty_seed': b'\x00'*32,
         'dynasty_seed_last_reset': 0,
-    }
+    }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():

@@ -1,5 +1,6 @@
-from typing import (
+from typing import (  # noqa: F401
     Any,
+    Dict,
 )
 
 
@@ -29,8 +30,7 @@ class ValidatorRecord():
         'balance': 0,
         'start_dynasty': 0,
         'end_dynasty': 0,
-    }
-
+    }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():
