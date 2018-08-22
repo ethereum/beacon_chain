@@ -1,3 +1,7 @@
+from typing import (
+    Any,
+)
+
 from .crosslink_record import CrosslinkRecord
 from .shard_and_committee import ShardAndCommittee
 from .validator_record import ValidatorRecord
@@ -52,10 +56,16 @@ class CrystallizedState():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        super().__setattr__(name, value)
+
+    def __getattribute__(self, name: str) -> Any:
+        return super().__getattribute__(name)
+
     @property
-    def num_validators(self):
+    def num_validators(self) -> int:
         return len(self.validators)
 
     @property
-    def num_crosslink_records(self):
+    def num_crosslink_records(self) -> int:
         return len(self.crosslink_records)

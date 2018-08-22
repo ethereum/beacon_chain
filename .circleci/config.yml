@@ -36,6 +36,7 @@ jobs:
             . venv/bin/activate
             mkdir test-reports
             pytest tests --junitxml=test-reports/junit.xml
+            mypy --follow-imports=silent --ignore-missing-imports --no-strict-optional --check-untyped-defs --disallow-incomplete-defs -p beacon_chain.state
 
       - store_test_results:
           path: test-reports

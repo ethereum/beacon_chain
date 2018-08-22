@@ -5,3 +5,5 @@ venv
 .python-version
 test-reports/
 notes.txt
+.mypy_cache
+.eggs/

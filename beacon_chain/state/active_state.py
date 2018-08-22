@@ -1,3 +1,8 @@
+from typing import (
+    Any,
+    Dict,
+)
+
 from .attestation_record import AttestationRecord
 
 
@@ -12,7 +17,7 @@ class ActiveState():
     defaults = {
         'pending_attestations': [],
         'recent_block_hashes': [],
-    }
+    }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():
@@ -25,6 +30,12 @@ class ActiveState():
             self.block_vote_cache = kwargs['block_vote_cache']
         else:
             self.block_vote_cache = {}
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        super().__setattr__(name, value)
+
+    def __getattribute__(self, name: str) -> Any:
+        return super().__getattribute__(name)
 
     @property
     def num_pending_attestations(self):
