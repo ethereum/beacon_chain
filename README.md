@@ -16,3 +16,11 @@ pytest tests
 ```
 
 Run with `-s` option for detailed log output
+
+
+## Installation through Docker
+```
+make build
+
+make deploy
+```
