@@ -1,16 +1,13 @@
 import pytest
 
-from beacon_chain.utils.blake import blake
-
 from beacon_chain.state.active_state import ActiveState
-from beacon_chain.state.block import Block
 from beacon_chain.state.helpers import (
     get_new_shuffling,
     get_indices_for_slot,
     get_block_hash,
 )
 
-from tests.state.helpers import(
+from tests.state.helpers import (
     get_pseudo_chain,
 )
 
@@ -86,29 +83,40 @@ def test_get_indices_for_slot(
 
 @pytest.mark.parametrize(
     (
-        'slot,success'
+        'current_block_number,slot,success'
     ),
     [
-        (0, True),
-        (127, True),
-        (128, False),
+        (10, 0, True),
+        (10, 9, True),
+        (10, 10, False),
+        (128, 0, True),
+        (128, 127, True),
+        (128, 128, False),
     ],
 )
 def test_get_block_hash(
         genesis_block,
+        current_block_number,
         slot,
         success,
         config):
     cycle_length = config['cycle_length']
 
     blocks = get_pseudo_chain(cycle_length * 3)
+    recent_block_hashes = [
+            b'\x00' * 32
+            for i
+            in range(cycle_length * 2 - current_block_number)
+        ] + [block.hash for block in blocks[:current_block_number]]
     active_state = ActiveState(
-        recent_block_hashes=[block.hash for block in blocks[:cycle_length*2]]
+        recent_block_hashes=recent_block_hashes,
     )
+    current_block = blocks[current_block_number]
+
     if success:
         block_hash = get_block_hash(
             active_state,
-            blocks[cycle_length*2],
+            current_block,
             slot,
             config=config,
         )
@@ -117,7 +125,7 @@ def test_get_block_hash(
         with pytest.raises(AssertionError):
             get_block_hash(
                 active_state,
-                blocks[cycle_length*2],
+                current_block,
                 slot,
                 config=config,
             )
