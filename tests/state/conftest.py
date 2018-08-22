@@ -257,7 +257,7 @@ def genesis_crystallized_state(genesis_validators,
 
     return CrystallizedState(
         validators=validators,
-        epoch_number=0,
+        last_state_recalc=0,
         indices_for_heights=indices_for_heights,
         last_justified_slot=0,
         justified_streak=0,

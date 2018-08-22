@@ -1,3 +1,25 @@
+from typing import (
+    Any,
+    Dict,
+    List,
+    NewType,
+    Tuple,
+    TYPE_CHECKING,
+    Union,
+)
+
+import beacon_chain.utils.bls as bls
+from beacon_chain.utils.blake import (
+    blake,
+)
+from beacon_chain.utils.bitfield import (
+    get_bitfield_length,
+    has_voted,
+)
+from beacon_chain.utils.simpleserialize import (
+    deepcopy,
+)
+
 from .config import (
     DEFAULT_CONFIG,
 )
@@ -17,20 +39,16 @@ from .helpers import (
     get_signed_parent_hashes,
 )
 
-import beacon_chain.utils.bls as bls
-from beacon_chain.utils.blake import (
-    blake,
-)
-from beacon_chain.utils.bitfield import (
-    get_bitfield_length,
-    has_voted,
-)
-from beacon_chain.utils.simpleserialize import (
-    deepcopy,
-)
+if TYPE_CHECKING:
+    from .attesation_record import AttestationRecord  # noqa: F401
+    from .block import Block  # noqa: F401
+
+BlockVoteCache = Dict[str, Dict[str, Union[str, bytes, int]]]
+Hash32 = NewType('Hash32', bytes)
+ShardId = NewType('ShardId', int)
 
 
-def validate_block(block):
+def validate_block(block: 'Block') -> bool:
     # ensure parent processed
     # ensure pow_chain_ref processed
     # ensure local time is large enough to process this block's slot
@@ -38,11 +56,11 @@ def validate_block(block):
     return True
 
 
-def validate_attestation(crystallized_state,
-                         active_state,
-                         attestation,
-                         block,
-                         config=DEFAULT_CONFIG):
+def validate_attestation(crystallized_state: CrystallizedState,
+                         active_state: ActiveState,
+                         attestation: 'AttestationRecord',
+                         block: 'Block',
+                         config: Dict[str, Any]=DEFAULT_CONFIG) -> None:
     if not attestation.slot < block.slot_number:
         raise Exception("Attestation slot number too high")
 
@@ -100,12 +118,12 @@ def validate_attestation(crystallized_state,
         raise Exception("Attestation aggregate signature fails")
 
 
-def get_updated_block_vote_cache(crystallized_state,
-                                 active_state,
-                                 attestation,
-                                 block,
-                                 block_vote_cache,
-                                 config):
+def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
+                                 active_state: ActiveState,
+                                 attestation: 'AttestationRecord',
+                                 block: 'Block',
+                                 block_vote_cache: BlockVoteCache,
+                                 config: Dict[str, Any]=DEFAULT_CONFIG) -> BlockVoteCache:
     new_block_vote_cache = deepcopy(block_vote_cache)
 
     parent_hashes = get_signed_parent_hashes(
@@ -137,10 +155,10 @@ def get_updated_block_vote_cache(crystallized_state,
     return new_block_vote_cache
 
 
-def process_block(crystallized_state,
-                   active_state,
-                   block,
-                   config=DEFAULT_CONFIG):
+def process_block(crystallized_state: CrystallizedState,
+                   active_state: ActiveState,
+                   block: 'Block',
+                   config: dict = DEFAULT_CONFIG) -> ActiveState:
     new_block_vote_cache = deepcopy(active_state.block_vote_cache)
     for attestation in block.attestations:
         validate_attestation(crystallized_state,
@@ -167,10 +185,11 @@ def process_block(crystallized_state,
     return new_active_state
 
 
-def process_updated_crosslinks(crystallized_state,
-                               active_state,
-                               config=DEFAULT_CONFIG):
-    total_attestation_balance = {}
+def process_updated_crosslinks(crystallized_state: CrystallizedState,
+                               active_state: ActiveState,
+                               config: Dict[str, Any]=DEFAULT_CONFIG) -> List[CrosslinkRecord]:
+    total_attestation_balance = {}  # type: Dict[Tuple[ShardId, Hash32], int]
+
     crosslinks = deepcopy(crystallized_state.crosslink_records)
 
     for attestation in active_state.pending_attestations:
@@ -206,10 +225,10 @@ def process_updated_crosslinks(crystallized_state,
     return crosslinks
 
 
-def initialize_new_cycle(crystallized_state,
-                         active_state,
-                         block,
-                         config=DEFAULT_CONFIG):
+def initialize_new_cycle(crystallized_state: CrystallizedState,
+                         active_state: ActiveState,
+                         block: 'Block',
+                         config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     cycle_length = config['cycle_length']
     last_state_recalc = crystallized_state.last_state_recalc
     last_justified_slot = crystallized_state.last_justified_slot
@@ -285,9 +304,9 @@ def initialize_new_cycle(crystallized_state,
     return new_crystallized_state, new_active_state
 
 
-def fill_recent_block_hashes(active_state,
-                             parent_block,
-                             block):
+def fill_recent_block_hashes(active_state: ActiveState,
+                             parent_block: 'Block',
+                             block: 'Block') -> ActiveState:
     return ActiveState(
         pending_attestations=deepcopy(active_state.pending_attestations),
         recent_block_hashes=get_new_recent_block_hashes(
@@ -300,10 +319,10 @@ def fill_recent_block_hashes(active_state,
     )
 
 
-def compute_state_transition(parent_state,
-                             parent_block,
-                             block,
-                             config=DEFAULT_CONFIG):
+def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState],
+                             parent_block: 'Block',
+                             block: 'Block',
+                             config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     crystallized_state, active_state = parent_state
 
     assert validate_block(block)

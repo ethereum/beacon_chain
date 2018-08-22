@@ -1,3 +1,8 @@
+from typing import (  # noqa: F401
+    Any,
+    Dict,
+)
+
 from .crosslink_record import CrosslinkRecord
 from .shard_and_committee import ShardAndCommittee
 from .validator_record import ValidatorRecord
@@ -45,17 +50,23 @@ class CrystallizedState():
         'total_deposits': 0,
         'dynasty_seed': b'\x00'*32,
         'dynasty_seed_last_reset': 0,
-    }
+    }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):
         for k in self.fields.keys():
             assert k in kwargs or k in self.defaults
             setattr(self, k, kwargs.get(k, self.defaults.get(k)))
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        super().__setattr__(name, value)
+
+    def __getattribute__(self, name: str) -> Any:
+        return super().__getattribute__(name)
+
     @property
-    def num_validators(self):
+    def num_validators(self) -> int:
         return len(self.validators)
 
     @property
-    def num_crosslink_records(self):
+    def num_crosslink_records(self) -> int:
         return len(self.crosslink_records)
