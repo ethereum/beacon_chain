@@ -5,6 +5,6 @@ py-ecc==1.4.3
 pytest==3.6.1
 pytest-mock==1.10.0
 web3==4.3.0
-eth-vyper==0.1.0b3
+vyper==0.1.0b2
 # for Python versions older than Python 3.6
-pyblake2==1.1.2 
+pyblake2==1.1.2
