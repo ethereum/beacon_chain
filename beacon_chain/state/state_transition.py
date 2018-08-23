@@ -2,10 +2,14 @@ from typing import (
     Any,
     Dict,
     List,
-    NewType,
     Tuple,
     TYPE_CHECKING,
-    Union,
+)
+
+from beacon_chain.beacon_typing.custom import (  # noqa: F401
+    BlockVoteCache,
+    Hash32,
+    ShardId,
 )
 
 import beacon_chain.utils.bls as bls
@@ -42,10 +46,6 @@ from .helpers import (
 if TYPE_CHECKING:
     from .attesation_record import AttestationRecord  # noqa: F401
     from .block import Block  # noqa: F401
-
-BlockVoteCache = Dict[str, Dict[str, Union[str, bytes, int]]]
-Hash32 = NewType('Hash32', bytes)
-ShardId = NewType('ShardId', int)
 
 
 def validate_block(block: 'Block') -> bool:
@@ -156,9 +156,9 @@ def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
 
 
 def process_block(crystallized_state: CrystallizedState,
-                   active_state: ActiveState,
-                   block: 'Block',
-                   config: dict = DEFAULT_CONFIG) -> ActiveState:
+                  active_state: ActiveState,
+                  block: 'Block',
+                  config: dict = DEFAULT_CONFIG) -> ActiveState:
     new_block_vote_cache = deepcopy(active_state.block_vote_cache)
     for attestation in block.attestations:
         validate_attestation(crystallized_state,

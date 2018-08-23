@@ -1,3 +1,15 @@
+from typing import (
+    Any,
+    Dict,
+    List,
+    TYPE_CHECKING,
+)
+
+from beacon_chain.beacon_typing.custom import (
+    Hash32,
+    ShardId,
+)
+
 from beacon_chain.state.config import (
     DEFAULT_CONFIG,
 )
@@ -9,14 +21,22 @@ from beacon_chain.utils.blake import (
 )
 
 
-def is_power_of_two(num):
+if TYPE_CHECKING:
+    from .active_state import ActiveState  # noqa: F401
+    from .attestation import AttestationRecord  # noqa: F401
+    from .block import Block  # noqa: F401
+    from .crystallized_state import CrystallizedState  # noqa: F401
+    from .validator_record import ValidatorRecord  # noqa: F401
+
+
+def is_power_of_two(num: int) -> bool:
     return ((num & (num - 1)) == 0) and num != 0
 
 
-def get_signed_parent_hashes(active_state,
-                             block,
-                             attestation,
-                             config=DEFAULT_CONFIG):
+def get_signed_parent_hashes(active_state: 'ActiveState',
+                             block: 'Block',
+                             attestation: 'AttestationRecord',
+                             config: Dict[str, Any]=DEFAULT_CONFIG) -> List[Hash32]:
     cycle_length = config['cycle_length']
 
     parent_hashes = [
@@ -33,12 +53,9 @@ def get_signed_parent_hashes(active_state,
     return parent_hashes
 
 
-def get_attestation_indices(crystallized_state,
-                            attestation,
-                            config=DEFAULT_CONFIG):
-    last_state_recalc = crystallized_state.last_state_recalc
-    cycle_length = config['cycle_length']
-    indices_for_slots = crystallized_state.indices_for_slots
+def get_attestation_indices(crystallized_state: 'CrystallizedState',
+                            attestation: 'AttestationRecord',
+                            config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
     shard_id = attestation.shard_id
 
     filtered_indices_for_slot = list(
@@ -51,21 +68,24 @@ def get_attestation_indices(crystallized_state,
             )
         )
     )
+
+    attestation_indices = []  # type: List[int]
     if filtered_indices_for_slot:
         attestation_indices = filtered_indices_for_slot[0].committee
 
     return attestation_indices
 
 
-def get_new_recent_block_hashes(old_block_hashes,
-                                parent_slot,
-                                current_slot,
-                                parent_hash):
+def get_new_recent_block_hashes(old_block_hashes: List[Hash32],
+                                parent_slot: int,
+                                current_slot: int,
+                                parent_hash: Hash32) -> List[Hash32]:
     d = current_slot - parent_slot
     return old_block_hashes[d:] + [parent_hash] * min(d, len(old_block_hashes))
 
 
-def get_active_validator_indices(dynasty, validators):
+def get_active_validator_indices(dynasty: int,
+                                 validators: List['ValidatorRecord']) -> List[int]:
     o = []
     for index, validator in enumerate(validators):
         if (validator.start_dynasty <= dynasty and dynasty < validator.end_dynasty):
@@ -73,9 +93,9 @@ def get_active_validator_indices(dynasty, validators):
     return o
 
 
-def shuffle(lst,
-            seed,
-            config=DEFAULT_CONFIG):
+def shuffle(lst: List[int],
+            seed: Hash32,
+            config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
     lst_count = len(lst)
     assert lst_count <= 16777216
     o = [x for x in lst]
@@ -96,18 +116,18 @@ def shuffle(lst,
     return o
 
 
-def split(lst, N):
+def split(lst: List[Any], N: int) -> List[Any]:
     list_length = len(lst)
     return [
         lst[(list_length * i // N): (list_length * (i+1) // N)] for i in range(N)
     ]
 
 
-def get_new_shuffling(seed,
-                      validators,
-                      dynasty,
-                      crosslinking_start_shard,
-                      config=DEFAULT_CONFIG):
+def get_new_shuffling(seed: Hash32,
+                      validators: List['ValidatorRecord'],
+                      dynasty: int,
+                      crosslinking_start_shard: ShardId,
+                      config: Dict[str, Any]=DEFAULT_CONFIG) -> List[List[ShardAndCommittee]]:
     cycle_length = config['cycle_length']
     min_committee_size = config['min_committee_size']
     avs = get_active_validator_indices(dynasty, validators)
@@ -137,9 +157,9 @@ def get_new_shuffling(seed,
 
 
 def get_indices_for_slot(
-        crystallized_state,
-        slot,
-        config=DEFAULT_CONFIG):
+        crystallized_state: 'CrystallizedState',
+        slot: int,
+        config: Dict[str, Any]=DEFAULT_CONFIG) -> List[ShardAndCommittee]:
     cycle_length = config['cycle_length']
 
     start = crystallized_state.last_state_recalc - cycle_length
@@ -148,10 +168,10 @@ def get_indices_for_slot(
 
 
 def get_block_hash(
-        active_state,
-        current_block,
-        slot,
-        config=DEFAULT_CONFIG):
+        active_state: 'ActiveState',
+        current_block: 'Block',
+        slot: int,
+        config: Dict[str, Any]=DEFAULT_CONFIG) -> Hash32:
     cycle_length = config['cycle_length']
 
     sback = current_block.slot_number - cycle_length * 2
