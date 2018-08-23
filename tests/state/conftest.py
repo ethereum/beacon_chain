@@ -108,7 +108,7 @@ def sample_crystallized_state_params():
     return {
         'validators': [],
         'last_state_recalc': 50,
-        'indices_for_heights': [],
+        'indices_for_slots': [],
         'last_justified_slot': 100,
         'justified_streak': 10,
         'last_finalized_slot': 70,
@@ -245,7 +245,7 @@ def genesis_crystallized_state(genesis_validators,
     crosslinking_start_shard = 0
     validators = genesis_validators
 
-    indices_for_heights = get_new_shuffling(
+    indices_for_slots = get_new_shuffling(
         init_shuffling_seed,
         validators,
         current_dynasty,
@@ -253,12 +253,12 @@ def genesis_crystallized_state(genesis_validators,
         config
     )
     # concatenate with itself to span 2*CYCLE_LENGTH
-    indices_for_heights = indices_for_heights + indices_for_heights
+    indices_for_slots = indices_for_slots + indices_for_slots
 
     return CrystallizedState(
         validators=validators,
         last_state_recalc=0,
-        indices_for_heights=indices_for_heights,
+        indices_for_slots=indices_for_slots,
         last_justified_slot=0,
         justified_streak=0,
         last_finalized_slot=0,
@@ -305,7 +305,7 @@ def mock_make_attestations(keymap, config):
         cycle_length = config['cycle_length']
 
         in_epoch_slot_height = block.slot_number % cycle_length
-        indices = crystallized_state.indices_for_heights[cycle_length + in_epoch_slot_height]
+        indices = crystallized_state.indices_for_slots[cycle_length + in_epoch_slot_height]
 
         print("Generating attestations for shards: %s" % len(indices))
 

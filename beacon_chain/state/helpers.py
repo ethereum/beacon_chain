@@ -18,16 +18,18 @@ def get_signed_parent_hashes(active_state,
                              attestation,
                              config=DEFAULT_CONFIG):
     cycle_length = config['cycle_length']
-    oblique_parent_hashes = attestation.oblique_parent_hashes
 
-    parent_hashes = (
-        active_state.recent_block_hashes[
-            cycle_length + attestation.slot - block.slot_number:
-            cycle_length * 2 + attestation.slot - block.slot_number - len(oblique_parent_hashes)
-        ] +
-        oblique_parent_hashes
+    parent_hashes = [
+        get_block_hash(
+            active_state,
+            block,
+            attestation.slot - cycle_length + i,
+            config,
+        )
+        for i
+        in range(cycle_length - len(attestation.oblique_parent_hashes))
+    ] + attestation.oblique_parent_hashes
 
-    )
     return parent_hashes
 
 
@@ -36,20 +38,21 @@ def get_attestation_indices(crystallized_state,
                             config=DEFAULT_CONFIG):
     last_state_recalc = crystallized_state.last_state_recalc
     cycle_length = config['cycle_length']
-    indices_for_heights = crystallized_state.indices_for_heights
+    indices_for_slots = crystallized_state.indices_for_slots
+    shard_id = attestation.shard_id
 
-    shard_position = list(filter(
-        lambda x: (
-            indices_for_heights[attestation.slot - last_state_recalc + cycle_length][x].shard_id ==
-            attestation.shard_id
-        ),
-        range(len(indices_for_heights[attestation.slot - last_state_recalc + cycle_length]))
-    ))[0]
-    attestation_indices = (
-        indices_for_heights[
-            attestation.slot - last_state_recalc + cycle_length
-        ][shard_position].committee
+    filtered_indices_for_slot = list(
+        filter(
+            lambda x: x.shard_id == shard_id,
+            get_indices_for_slot(
+                crystallized_state,
+                attestation.slot,
+                config=config,
+            )
+        )
     )
+    if filtered_indices_for_slot:
+        attestation_indices = filtered_indices_for_slot[0].committee
 
     return attestation_indices
 
@@ -131,3 +134,26 @@ def get_new_shuffling(seed,
             committee=indices
         ) for j, indices in enumerate(shard_indices)])
     return o
+
+
+def get_indices_for_slot(
+        crystallized_state,
+        slot,
+        config=DEFAULT_CONFIG):
+    cycle_length = config['cycle_length']
+
+    start = crystallized_state.last_state_recalc - cycle_length
+    assert start <= slot < start + cycle_length * 2
+    return crystallized_state.indices_for_slots[slot - start]
+
+
+def get_block_hash(
+        active_state,
+        current_block,
+        slot,
+        config=DEFAULT_CONFIG):
+    cycle_length = config['cycle_length']
+
+    sback = current_block.slot_number - cycle_length * 2
+    assert sback <= slot < sback + cycle_length * 2
+    return active_state.recent_block_hashes[slot - sback]

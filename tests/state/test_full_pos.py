@@ -49,7 +49,7 @@ def test_state_transition_integration(genesis_crystallized_state,
         "Normal block with %s attestations of size %s processed in %.4f sec" %
         (
             len(attestations_of_genesis),
-            len(c.indices_for_heights[attestations_of_genesis[0].slot][0].committee),
+            len(c.indices_for_slots[attestations_of_genesis[0].slot][0].committee),
             (time.time() - t))
         )
     print('Verified a block!')
