@@ -40,3 +40,7 @@ class ActiveState():
     @property
     def num_pending_attestations(self):
         return len(self.pending_attestations)
+
+    @property
+    def num_recent_block_hashes(self):
+        return len(self.recent_block_hashes)

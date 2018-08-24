@@ -32,6 +32,11 @@ from beacon_chain.state.validator_record import (
 from beacon_chain.state.state_transition import (
     compute_state_transition,
 )
+from beacon_chain.state.genesis_helpers import (
+    get_genesis_active_state,
+    get_genesis_block,
+    get_genesis_crystallized_state,
+)
 from beacon_chain.state.helpers import (
     get_new_shuffling,
     get_signed_parent_hashes,
@@ -241,58 +246,26 @@ def genesis_validators(init_validator_keys,
 def genesis_crystallized_state(genesis_validators,
                                init_shuffling_seed,
                                config):
-    current_dynasty = 1
-    crosslinking_start_shard = 0
-    validators = genesis_validators
-
-    indices_for_slots = get_new_shuffling(
+    return get_genesis_crystallized_state(
+        genesis_validators,
         init_shuffling_seed,
-        validators,
-        current_dynasty,
-        crosslinking_start_shard,
-        config
-    )
-    # concatenate with itself to span 2*CYCLE_LENGTH
-    indices_for_slots = indices_for_slots + indices_for_slots
-
-    return CrystallizedState(
-        validators=validators,
-        last_state_recalc=0,
-        indices_for_slots=indices_for_slots,
-        last_justified_slot=0,
-        justified_streak=0,
-        last_finalized_slot=0,
-        current_dynasty=current_dynasty,
-        crosslinking_start_shard=crosslinking_start_shard,
-        crosslink_records=[
-            CrosslinkRecord(hash=b'\x00'*32, dynasty=0) for i in range(config['shard_count'])
-        ],
-        total_deposits=config['deposit_size']*len(validators),
-        dynasty_seed=init_shuffling_seed,
-        dynasty_seed_last_reset=1
+        config,
     )
 
 
 @pytest.fixture
-def genesis_active_state(genesis_crystallized_state, cycle_length):
-    recent_block_hashes = [b'\x00'*32] * cycle_length * 2
-
-    return ActiveState(
-        pending_attestations=[],
-        recent_block_hashes=recent_block_hashes
-    )
+def genesis_active_state(config):
+    return get_genesis_active_state(config)
 
 
 @pytest.fixture
-def genesis_block():
-    return Block(
-        parent_hash=b'\x00'*32,
-        slot_number=0,
-        randao_reveal=b'\x00'*32,
-        attestations=[],
-        pow_chain_ref=b'\x00'*32,
-        active_state_root=b'\x00'*32,
-        crystallized_state_root=b'\x00'*32,
+def genesis_block(genesis_active_state, genesis_crystallized_state):
+    active_state_root = blake(serialize(genesis_active_state))
+    crystallized_state_root = blake(serialize(genesis_crystallized_state))
+    
+    return get_genesis_block(
+        active_state_root=active_state_root,
+        crystallized_state_root=crystallized_state_root,
     )
 
 
