@@ -27,7 +27,7 @@ def get_pseudo_chain(length):
         blocks.append(
             Block(
                 slot_number=slot,
-                parent_hash=blocks[slot-1].hash if slot > 0 else b'00'*32
+                parent_hash=blocks[slot-1].hash if slot > 0 else b'\x00'*32
             )
         )
 
