@@ -7,6 +7,7 @@ from typing import (
 
 from beacon_chain.beacon_typing.custom import (
     Hash32,
+    ShardId,
 )
 
 from .active_state import ActiveState
@@ -39,7 +40,7 @@ def get_genesis_crystallized_state(
         config: Dict[str, Any]) -> CrystallizedState:
 
     current_dynasty = 1
-    crosslinking_start_shard = 0
+    crosslinking_start_shard = ShardId(0)
 
     indices_for_slots = get_new_shuffling(
         init_shuffling_seed,
