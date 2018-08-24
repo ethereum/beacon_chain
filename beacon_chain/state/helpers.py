@@ -93,9 +93,9 @@ def get_active_validator_indices(dynasty: int,
     return o
 
 
-def shuffle(lst: List[int],
+def shuffle(lst: List[Any],
             seed: Hash32,
-            config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
+            config: Dict[str, Any]=DEFAULT_CONFIG) -> List[Any]:
     lst_count = len(lst)
     assert lst_count <= 16777216
     o = [x for x in lst]
