@@ -1,6 +1,10 @@
+import copy
+
 import pytest
 
 from beacon_chain.state.state_transition import (
+    get_recalculated_states,
+    fill_recent_block_hashes,
     validate_attestation,
 )
 
@@ -29,3 +33,27 @@ def test_validate_attestation_bitfield():
 
 def test_validate_attestation_aggregate_sig():
     pass
+
+
+def test_get_recalculated_states(genesis_block,
+                                 genesis_crystallized_state,
+                                 genesis_active_state,
+                                 config):
+    parent_crystallized_state = genesis_crystallized_state
+    parent_active_state = genesis_active_state
+    parent_block = genesis_block
+    block = copy.deepcopy(genesis_block)
+    block.slot_number = 258
+
+    active_state = fill_recent_block_hashes(
+        parent_active_state, parent_block, block
+    )
+    crystallized_state, active_state = get_recalculated_states(
+        block,
+        parent_crystallized_state,
+        active_state,
+        config=config,
+    )
+    assert crystallized_state.last_state_recalc == (
+        block.slot_number // config['cycle_length'] * config['cycle_length']
+    )

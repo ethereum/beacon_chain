@@ -331,13 +331,12 @@ def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState]
     active_state = fill_recent_block_hashes(active_state, parent_block, block)
 
     # Initialize a new cycle if needed
-    if block.slot_number >= (crystallized_state.last_state_recalc + config['cycle_length']):
-        crystallized_state, active_state = initialize_new_cycle(
-            crystallized_state,
-            active_state,
-            block,
-            config
-        )
+    crystallized_state, active_state = get_recalculated_states(
+        block,
+        crystallized_state,
+        active_state,
+        config=config,
+    )
 
     # process per block state changes
     active_state = process_block(
@@ -347,4 +346,19 @@ def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState]
         config
     )
 
+    return crystallized_state, active_state
+
+
+def get_recalculated_states(
+        block: 'Block',
+        crystallized_state: CrystallizedState,
+        active_state: ActiveState,
+        config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
+    while block.slot_number >= crystallized_state.last_state_recalc + config['cycle_length']:
+        crystallized_state, active_state = initialize_new_cycle(
+            crystallized_state,
+            active_state,
+            block,
+            config=config,
+        )
     return crystallized_state, active_state
