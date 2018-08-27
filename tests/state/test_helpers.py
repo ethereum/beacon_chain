@@ -49,6 +49,34 @@ def test_get_new_shuffling_is_complete(genesis_validators, config):
 
 @pytest.mark.parametrize(
     (
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,shard_count'
+    ),
+    [
+        (1000, 1000, 20, 10, 100),
+        (100, 500, 50, 10, 10),
+        (20, 100, 10, 3, 10),
+    ],
+)
+def test_get_new_shuffling_handles_shard_wrap(genesis_validators, config):
+    dynasty = 1
+
+    shuffling = get_new_shuffling(
+        b'\x35'*32,
+        genesis_validators,
+        dynasty,
+        config['shard_count'] - 1,
+        config
+    )
+
+    # shard assignments should wrap around to 0 rather than continuing to SHARD_COUNT
+    for slot_height in shuffling:
+        for shard_and_committee in slot_height:
+            assert shard_and_committee.shard_id < config['shard_count']
+
+
+@pytest.mark.parametrize(
+    (
         'num_validators,slot,success'
     ),
     [

@@ -130,6 +130,7 @@ def get_new_shuffling(seed: Hash32,
                       config: Dict[str, Any]=DEFAULT_CONFIG) -> List[List[ShardAndCommittee]]:
     cycle_length = config['cycle_length']
     min_committee_size = config['min_committee_size']
+    shard_count = config['shard_count']
     avs = get_active_validator_indices(dynasty, validators)
     if len(avs) >= cycle_length * min_committee_size:
         committees_per_slot = int(len(avs) // cycle_length // (min_committee_size * 2)) + 1
@@ -146,11 +147,9 @@ def get_new_shuffling(seed: Hash32,
     validators_per_slot = split(shuffled_active_validator_indices, cycle_length)
     for slot, height_indices in enumerate(validators_per_slot):
         shard_indices = split(height_indices, committees_per_slot)
+        shard_id_start = crosslinking_start_shard + slot * committees_per_slot // slots_per_committee
         o.append([ShardAndCommittee(
-            shard_id=(
-                crosslinking_start_shard +
-                slot * committees_per_slot // slots_per_committee + j
-            ),
+            shard_id=(shard_id_start + j) % shard_count,
             committee=indices
         ) for j, indices in enumerate(shard_indices)])
     return o
