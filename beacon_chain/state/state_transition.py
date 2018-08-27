@@ -109,7 +109,7 @@ def validate_attestation(crystallized_state: CrystallizedState,
         if has_voted(attestation.attester_bitfield, i)
     ]
     message = blake(
-        in_cycle_slot_height.to_bytes(8, byteorder='big') +
+        attestation.slot.to_bytes(8, byteorder='big') +
         b''.join(parent_hashes) +
         attestation.shard_id.to_bytes(2, byteorder='big') +
         attestation.shard_block_hash

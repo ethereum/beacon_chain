@@ -262,7 +262,7 @@ def genesis_active_state(config):
 def genesis_block(genesis_active_state, genesis_crystallized_state):
     active_state_root = blake(serialize(genesis_active_state))
     crystallized_state_root = blake(serialize(genesis_crystallized_state))
-    
+
     return get_genesis_block(
         active_state_root=active_state_root,
         crystallized_state_root=crystallized_state_root,
@@ -277,8 +277,8 @@ def mock_make_attestations(keymap, config):
         crystallized_state, active_state = parent_state
         cycle_length = config['cycle_length']
 
-        in_epoch_slot_height = block.slot_number % cycle_length
-        indices = crystallized_state.indices_for_slots[cycle_length + in_epoch_slot_height]
+        in_cycle_slot_height = block.slot_number % cycle_length
+        indices = crystallized_state.indices_for_slots[cycle_length + in_cycle_slot_height]
 
         print("Generating attestations for shards: %s" % len(indices))
 
@@ -313,7 +313,7 @@ def mock_make_attestations(keymap, config):
                 config
             )
             message = blake(
-                in_epoch_slot_height.to_bytes(8, byteorder='big') +
+                attestation.slot.to_bytes(8, byteorder='big') +
                 b''.join(parent_hashes) +
                 shard_id.to_bytes(2, byteorder='big') +
                 attestation.shard_block_hash
