@@ -9,7 +9,7 @@ from beacon_chain.utils.simpleserialize import (
 
 from beacon_chain.state.state_transition import (
     fill_recent_block_hashes,
-    get_recalculated_states,
+    compute_cycle_transitions,
     initialize_new_cycle,
 )
 
@@ -42,10 +42,16 @@ def test_validate_attestation_aggregate_sig():
 
 @pytest.mark.parametrize(
     (
-        'cycle_length,last_state_recalc,'
-        'last_justified_slot,justified_streak,last_finalized_slot,'
-        'crystallized_state_total_deposits,block_vote_cache_total_deposits,'
-        'result_last_state_recalc,result_justified_streak, result_last_finalized_slot'
+        'cycle_length,'
+        'last_state_recalc,'
+        'last_justified_slot,'
+        'justified_streak,'
+        'last_finalized_slot,'
+        'crystallized_state_total_deposits,'
+        'block_vote_cache_total_deposits,'
+        'result_last_state_recalc,'
+        'result_justified_streak,'
+        'result_last_finalized_slot'
     ),
     [
         (64, 0, 0, 0, 0, 3, 2, 64, 0+64, 0),  # 2/3 attestations
@@ -102,10 +108,10 @@ def test_initialize_new_cycle(genesis_crystallized_state,
     assert crystallized_state.last_finalized_slot == result_last_finalized_slot
 
 
-def test_get_recalculated_states(genesis_crystallized_state,
-                                 genesis_active_state,
-                                 genesis_block,
-                                 config):
+def test_compute_cycle_transitions(genesis_crystallized_state,
+                                   genesis_active_state,
+                                   genesis_block,
+                                   config):
     parent_crystallized_state = genesis_crystallized_state
     parent_active_state = genesis_active_state
     parent_block = genesis_block
@@ -115,7 +121,7 @@ def test_get_recalculated_states(genesis_crystallized_state,
     active_state = fill_recent_block_hashes(
         parent_active_state, parent_block, block
     )
-    crystallized_state, active_state = get_recalculated_states(
+    crystallized_state, active_state = compute_cycle_transitions(
         parent_crystallized_state,
         active_state,
         block,

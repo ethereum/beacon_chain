@@ -331,7 +331,7 @@ def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState]
     active_state = fill_recent_block_hashes(active_state, parent_block, block)
 
     # Initialize a new cycle if needed
-    crystallized_state, active_state = get_recalculated_states(
+    crystallized_state, active_state = compute_cycle_transitions(
         crystallized_state,
         active_state,
         block,
@@ -349,7 +349,7 @@ def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState]
     return crystallized_state, active_state
 
 
-def get_recalculated_states(
+def compute_cycle_transitions(
         crystallized_state: CrystallizedState,
         active_state: ActiveState,
         block: 'Block',
