@@ -332,9 +332,9 @@ def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState]
 
     # Initialize a new cycle if needed
     crystallized_state, active_state = get_recalculated_states(
-        block,
         crystallized_state,
         active_state,
+        block,
         config=config,
     )
 
@@ -350,9 +350,9 @@ def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState]
 
 
 def get_recalculated_states(
-        block: 'Block',
         crystallized_state: CrystallizedState,
         active_state: ActiveState,
+        block: 'Block',
         config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     while block.slot_number >= crystallized_state.last_state_recalc + config['cycle_length']:
         crystallized_state, active_state = initialize_new_cycle(
