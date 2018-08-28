@@ -1,4 +1,5 @@
-eth-tester[py-evm]==0.1.0b29
+eth-tester[py-evm]==0.1.0b31
+py-evm[eth]==0.2.0a30
 eth-typing>=1.1.0,<2.0.0
 mypy==0.620
 py-ecc==1.4.3
