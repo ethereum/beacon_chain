@@ -1,6 +1,9 @@
 from beacon_chain.state.config import (
     DEFAULT_CONFIG,
 )
+from beacon_chain.state.constants import (
+    ZERO_HASH32,
+)
 from beacon_chain.state.block import Block
 from beacon_chain.state.validator_record import (
     ValidatorRecord,
@@ -27,7 +30,7 @@ def get_pseudo_chain(length):
         blocks.append(
             Block(
                 slot_number=slot,
-                parent_hash=blocks[slot-1].hash if slot > 0 else b'00'*32
+                parent_hash=blocks[slot - 1].hash if slot > 0 else ZERO_HASH32
             )
         )
 
