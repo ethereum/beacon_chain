@@ -3,6 +3,7 @@ import re
 
 class TestCase:
     def __init__(self, sentence):
+        print(f"Handling Testing Case:\n\n{sentence}\n")
         arrange_sentence, act_sentence, assert_sentence = sentence.split(':')
         self.configs = {token[-1]: int(token[:-1])
                         for token in arrange_sentence.split(',')}
