@@ -37,14 +37,42 @@ def test_get_new_shuffling_is_complete(genesis_validators, config):
     assert len(shuffling) == config['cycle_length']
     validators = set()
     shards = set()
-    for height_indices in shuffling:
-        for shard_and_committee in height_indices:
+    for slot_indices in shuffling:
+        for shard_and_committee in slot_indices:
             shards.add(shard_and_committee.shard_id)
             for vi in shard_and_committee.committee:
                 validators.add(vi)
 
     # assert len(shards) == config['shard_count']
     assert len(validators) == len(genesis_validators)
+
+
+@pytest.mark.parametrize(
+    (
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,shard_count'
+    ),
+    [
+        (1000, 1000, 20, 10, 100),
+        (100, 500, 50, 10, 10),
+        (20, 100, 10, 3, 10),
+    ],
+)
+def test_get_new_shuffling_handles_shard_wrap(genesis_validators, config):
+    dynasty = 1
+
+    shuffling = get_new_shuffling(
+        b'\x35'*32,
+        genesis_validators,
+        dynasty,
+        config['shard_count'] - 1,
+        config
+    )
+
+    # shard assignments should wrap around to 0 rather than continuing to SHARD_COUNT
+    for slot_indices in shuffling:
+        for shard_and_committee in slot_indices:
+            assert shard_and_committee.shard_id < config['shard_count']
 
 
 @pytest.mark.parametrize(
