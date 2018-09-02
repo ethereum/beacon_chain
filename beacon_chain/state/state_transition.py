@@ -102,7 +102,6 @@ def validate_attestation(crystallized_state: CrystallizedState,
     #
     # validate aggregate_sig
     #
-    in_cycle_slot_height = attestation.slot % config['cycle_length']
     pub_keys = [
         crystallized_state.validators[index].pubkey
         for i, index in enumerate(attestation_indices)
