@@ -71,7 +71,7 @@ def test_state_transition_integration(genesis_crystallized_state,
 
     t = time.time()
     assert compute_state_transition((c2, a2), block2, block3, config=config)
-    print("Epoch transition processed in %.4f sec" % (time.time() - t))
+    print("Cycle transition processed in %.4f sec" % (time.time() - t))
 
 
 @pytest.mark.parametrize(
@@ -80,9 +80,11 @@ def test_state_transition_integration(genesis_crystallized_state,
         'min_committee_size,shard_count'
     ),
     [
-        (10, 100, 5, 10, 10),
+        # all of these combinations allow for full committees for
+        # all shards within one cycle
+        (100, 100, 10, 5, 2),
         (100, 1000, 50, 10, 10),
-        (1000, 1000, 20, 10, 100),
+        (1000, 1000, 20, 10, 10),
     ],
 )
 def test_pos_finalization(genesis_crystallized_state,
@@ -121,6 +123,20 @@ def test_pos_finalization(genesis_crystallized_state,
     assert c.justified_streak == config['cycle_length']
     assert c.last_justified_slot == 0
     assert c.last_finalized_slot == 0
+
+    # check that the expected crosslinks were updated
+    expected_shards = [
+        shard_and_committee.shard_id
+        for indices in c.indices_for_slots
+        for shard_and_committee in indices
+    ]
+    for shard_id, crosslink in enumerate(c.crosslink_records):
+        if shard_id in expected_shards:
+            assert crosslink.slot == c.last_state_recalc
+        else:
+            assert crosslink.slot == 0
+
+    crosslinks_updated_slot = c.last_state_recalc
 
     # create 100% full vote blocks to one block before cycle transition
     for i in range(config['cycle_length'] - 1):
@@ -174,4 +190,9 @@ def test_pos_finalization(genesis_crystallized_state,
     # still 0 because CYCLE_LENGTH + 1 before lsat_justified_slot is negative
     assert c.last_finalized_slot == c.last_justified_slot - config['cycle_length'] - 1
 
-
+    # Dynasties do not ever update yet so crosslinks should not have been updated
+    for shard_id, crosslink in enumerate(c.crosslink_records):
+        if shard_id in expected_shards:
+            assert crosslink.slot == crosslinks_updated_slot
+        else:
+            assert crosslink.slot == 0

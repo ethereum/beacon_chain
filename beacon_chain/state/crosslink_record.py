@@ -8,12 +8,15 @@ class CrosslinkRecord():
     fields = {
         # What dynasty the crosslink was submitted in
         'dynasty': 'int64',
+        # slot during which crosslink was added
+        'slot': 'int64',
         # The block hash
-        'hash': 'hash32'
+        'hash': 'hash32',
     }
     defaults = {
         'dynasty': 0,
-        'hash': b'\x00'*32
+        'slot': 0,
+        'hash': b'\x00'*32,
     }  # type: Dict[str, Any]
 
     def __init__(self, **kwargs):

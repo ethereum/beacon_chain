@@ -9,6 +9,7 @@ from beacon_chain.state.crosslink_record import (
     'param,default_value',
     [
         ('dynasty', 0),
+        ('slot', 0),
         ('hash', b'\x00'*32),
     ]
 )
