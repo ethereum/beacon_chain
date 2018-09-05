@@ -19,6 +19,9 @@ from beacon_chain.state.shard_and_committee import (
 from beacon_chain.utils.blake import (
     blake,
 )
+from beacon_chain.utils.simpleserialize import (
+    serialize,
+)
 
 
 if TYPE_CHECKING:
@@ -33,6 +36,29 @@ def is_power_of_two(num: int) -> bool:
     return ((num & (num - 1)) == 0) and num != 0
 
 
+# Given the head block to attest to, collect the list of hashes to be
+# signed in the attestation
+def get_hashes_to_sign(active_state: 'ActiveState',
+                       block: 'Block',
+                       config: Dict[str, Any]=DEFAULT_CONFIG) -> List[Hash32]:
+    cycle_length = config['cycle_length']
+
+    hashes = [
+        get_block_hash(
+            active_state,
+            block,
+            block.slot_number - cycle_length + i,
+            config,
+        )
+        for i
+        in range(1, cycle_length)
+    ] + [blake(serialize(block))]
+
+    return hashes
+
+
+# Given an attestation and the block they were included in,
+# the list of hashes that were included in the signature
 def get_signed_parent_hashes(active_state: 'ActiveState',
                              block: 'Block',
                              attestation: 'AttestationRecord',
@@ -47,7 +73,7 @@ def get_signed_parent_hashes(active_state: 'ActiveState',
             config,
         )
         for i
-        in range(cycle_length - len(attestation.oblique_parent_hashes))
+        in range(1, cycle_length - len(attestation.oblique_parent_hashes) + 1)
     ] + attestation.oblique_parent_hashes
 
     return parent_hashes
