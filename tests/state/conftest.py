@@ -147,6 +147,7 @@ def sample_shard_and_committee_params():
 def sample_crosslink_record_params():
     return {
         'dynasty': 2,
+        'slot': 0,
         'hash': b'\x43'*32,
     }
 

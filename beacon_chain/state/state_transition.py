@@ -186,6 +186,7 @@ def process_block(crystallized_state: CrystallizedState,
 
 def process_updated_crosslinks(crystallized_state: CrystallizedState,
                                active_state: ActiveState,
+                               block: 'Block',
                                config: Dict[str, Any]=DEFAULT_CONFIG) -> List[CrosslinkRecord]:
     total_attestation_balance = {}  # type: Dict[Tuple[ShardId, Hash32], int]
 
@@ -219,6 +220,7 @@ def process_updated_crosslinks(crystallized_state: CrystallizedState,
                 crystallized_state.current_dynasty > crosslinks[attestation.shard_id].dynasty):
             crosslinks[attestation.shard_id] = CrosslinkRecord(
                 dynasty=crystallized_state.current_dynasty,
+                slot=block.slot_number,
                 hash=attestation.shard_block_hash
             )
     return crosslinks
@@ -227,7 +229,8 @@ def process_updated_crosslinks(crystallized_state: CrystallizedState,
 def initialize_new_cycle(crystallized_state: CrystallizedState,
                          active_state: ActiveState,
                          block: 'Block',
-                         config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
+                         config: Dict[str, Any]=DEFAULT_CONFIG
+                         ) -> Tuple[CrystallizedState, ActiveState]:
     cycle_length = config['cycle_length']
     last_state_recalc = crystallized_state.last_state_recalc
     last_justified_slot = crystallized_state.last_justified_slot
@@ -256,6 +259,7 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
     crosslink_records = process_updated_crosslinks(
         crystallized_state,
         active_state,
+        block,
         config
     )
 
