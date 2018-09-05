@@ -42,6 +42,10 @@ from beacon_chain.state.helpers import (
     get_signed_parent_hashes,
 )
 
+from beacon_chain.state.constants import (
+    ZERO_HASH32,
+)
+
 import beacon_chain.utils.bls
 from beacon_chain.utils.bitfield import (
     get_empty_bitfield,
@@ -56,7 +60,7 @@ from beacon_chain.utils.simpleserialize import (
 
 bls = beacon_chain.utils.bls
 
-DEFAULT_SHUFFLING_SEED = b'\00'*32
+DEFAULT_SHUFFLING_SEED = ZERO_HASH32
 DEFAULT_RANDAO = b'\45'*32
 DEFAULT_NUM_VALIDATORS = 40
 
@@ -91,6 +95,8 @@ def sample_attestation_record_params():
         'oblique_parent_hashes': [],
         'shard_block_hash': b'\x20'*32,
         'attester_bitfield': b'\x33\x1F',
+        'justified_slot': 5,
+        'justified_block_hash': ZERO_HASH32,
         'aggregate_sig': [0, 0],
     }
 
@@ -356,9 +362,9 @@ def mock_make_child(keymap, config):
             slot_number=slot_number,
             randao_reveal=blake(str(random.random()).encode('utf-8')),
             attestations=attestations,
-            pow_chain_ref=b'\x00'*32,
-            active_state_root=b'\x00'*32,
-            crystallized_state_root=b'\x00'*32
+            pow_chain_ref=ZERO_HASH32,
+            active_state_root=ZERO_HASH32,
+            crystallized_state_root=ZERO_HASH32
         )
         print('Generated preliminary block header')
 

@@ -3,6 +3,9 @@ import pytest
 from beacon_chain.state.attestation_record import (
     AttestationRecord,
 )
+from beacon_chain.state.constants import (
+    ZERO_HASH32,
+)
 
 
 @pytest.mark.parametrize(
@@ -11,8 +14,10 @@ from beacon_chain.state.attestation_record import (
         ('slot', 0),
         ('shard_id', 0),
         ('oblique_parent_hashes', []),
-        ('shard_block_hash', b'\x00'*32),
+        ('shard_block_hash', ZERO_HASH32),
         ('attester_bitfield', b''),
+        ('justified_slot', 0),
+        ('justified_block_hash', ZERO_HASH32),
         ('aggregate_sig', [0, 0]),
     ]
 )
