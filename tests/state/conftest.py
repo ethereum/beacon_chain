@@ -38,8 +38,8 @@ from beacon_chain.state.genesis_helpers import (
     get_genesis_crystallized_state,
 )
 from beacon_chain.state.helpers import (
+    get_hashes_to_sign,
     get_new_shuffling,
-    get_signed_parent_hashes,
 )
 
 import beacon_chain.utils.bls
@@ -307,10 +307,9 @@ def mock_make_attestations(keymap, config):
             is_attesting[0] = True
 
             # Generating signatures and aggregating result
-            parent_hashes = get_signed_parent_hashes(
+            parent_hashes = get_hashes_to_sign(
                 active_state,
                 block,
-                attestation,
                 config
             )
             message = blake(

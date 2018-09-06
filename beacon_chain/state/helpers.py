@@ -19,6 +19,9 @@ from beacon_chain.state.shard_and_committee import (
 from beacon_chain.utils.blake import (
     blake,
 )
+from beacon_chain.utils.simpleserialize import (
+    serialize,
+)
 
 
 if TYPE_CHECKING:
@@ -33,24 +36,58 @@ def is_power_of_two(num: int) -> bool:
     return ((num & (num - 1)) == 0) and num != 0
 
 
+# Given the head block to attest to, collect the list of hashes to be
+# signed in the attestation
+def get_hashes_to_sign(active_state: 'ActiveState',
+                       block: 'Block',
+                       config: Dict[str, Any]=DEFAULT_CONFIG) -> List[Hash32]:
+    cycle_length = config['cycle_length']
+
+    hashes = get_hashes_from_active_state(
+        active_state,
+        block,
+        from_slot=block.slot_number - cycle_length + 1,
+        to_slot=block.slot_number - 1,
+        config=config,
+    ) + [blake(serialize(block))]
+
+    return hashes
+
+
+# Given an attestation and the block they were included in,
+# the list of hashes that were included in the signature
 def get_signed_parent_hashes(active_state: 'ActiveState',
                              block: 'Block',
                              attestation: 'AttestationRecord',
                              config: Dict[str, Any]=DEFAULT_CONFIG) -> List[Hash32]:
     cycle_length = config['cycle_length']
+    parent_hashes = get_hashes_from_active_state(
+        active_state,
+        block,
+        from_slot=attestation.slot - cycle_length + 1,
+        to_slot=attestation.slot - len(attestation.oblique_parent_hashes),
+        config=config,
+    ) + attestation.oblique_parent_hashes
 
-    parent_hashes = [
+    return parent_hashes
+
+
+def get_hashes_from_active_state(active_state: 'ActiveState',
+                                 block: 'Block',
+                                 from_slot: int,
+                                 to_slot: int,
+                                 config: Dict[str, Any]=DEFAULT_CONFIG) -> List[Hash32]:
+    hashes = [
         get_block_hash(
             active_state,
             block,
-            attestation.slot - cycle_length + i,
+            slot,
             config,
         )
-        for i
-        in range(cycle_length - len(attestation.oblique_parent_hashes))
-    ] + attestation.oblique_parent_hashes
-
-    return parent_hashes
+        for slot
+        in range(from_slot, to_slot + 1)
+    ]
+    return hashes
 
 
 def get_attestation_indices(crystallized_state: 'CrystallizedState',
