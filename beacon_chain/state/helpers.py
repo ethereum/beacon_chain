@@ -200,7 +200,7 @@ def get_indices_for_slot(
 
     start = crystallized_state.last_state_recalc - cycle_length
     assert start <= slot < start + cycle_length * 2
-    return crystallized_state.indices_for_slots[slot - start]
+    return crystallized_state.shard_and_committee_for_slots[slot - start]
 
 
 def get_block_hash(

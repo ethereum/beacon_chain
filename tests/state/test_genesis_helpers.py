@@ -27,12 +27,13 @@ def test_get_genesis_crystallized_state(genesis_validators,
         init_shuffling_seed,
         config,
     )
-    len_indices_for_slots = config['cycle_length'] * 2
+    len_shard_and_committee_for_slots = config['cycle_length'] * 2
     total_deposits = config['deposit_size'] * len(genesis_validators)
 
     assert crystallized_state.validators == genesis_validators
     assert crystallized_state.last_state_recalc == 0
-    assert len(crystallized_state.indices_for_slots) == len_indices_for_slots
+    assert len(crystallized_state.shard_and_committee_for_slots) == \
+        len_shard_and_committee_for_slots
     assert crystallized_state.last_justified_slot == 0
     assert crystallized_state.justified_streak == 0
     assert crystallized_state.last_finalized_slot == 0
@@ -45,7 +46,7 @@ def test_get_genesis_crystallized_state(genesis_validators,
         assert crosslink.dynasty == 0
     assert crystallized_state.total_deposits == total_deposits
     assert crystallized_state.dynasty_seed == init_shuffling_seed
-    assert crystallized_state.dynasty_seed_last_reset == 1
+    assert crystallized_state.dynasty_start == 0
 
 
 def test_get_genesis_block(genesis_active_state, genesis_crystallized_state):

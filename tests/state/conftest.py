@@ -7,6 +7,7 @@ from beacon_chain.state.config import (
     CYCLE_LENGTH,
     MAX_VALIDATOR_COUNT,
     MIN_COMMITTEE_SIZE,
+    MIN_DYNASTY_LENGTH,
     SHARD_COUNT,
     SLOT_DURATION,
     generate_config,
@@ -113,7 +114,7 @@ def sample_crystallized_state_params():
     return {
         'validators': [],
         'last_state_recalc': 50,
-        'indices_for_slots': [],
+        'shard_and_committee_for_slots': [],
         'last_justified_slot': 100,
         'justified_streak': 10,
         'last_finalized_slot': 70,
@@ -122,7 +123,7 @@ def sample_crystallized_state_params():
         'crosslink_records': [],
         'total_deposits': 10000,
         'dynasty_seed': b'\x55'*32,
-        'dynasty_seed_last_reset': 3,
+        'dynasty_start': 3,
     }
 
 
@@ -188,6 +189,11 @@ def min_committee_size():
 
 
 @pytest.fixture
+def min_dynasty_length():
+    return MIN_DYNASTY_LENGTH
+
+
+@pytest.fixture
 def shard_count():
     return SHARD_COUNT
 
@@ -203,6 +209,7 @@ def config(default_end_dynasty,
            cycle_length,
            max_validator_count,
            min_committee_size,
+           min_dynasty_length,
            shard_count,
            slot_duration):
     return generate_config(
@@ -211,6 +218,7 @@ def config(default_end_dynasty,
         cycle_length=cycle_length,
         max_validator_count=max_validator_count,
         min_committee_size=min_committee_size,
+        min_dynasty_length=min_dynasty_length,
         shard_count=shard_count,
         slot_duration=slot_duration
     )
@@ -279,7 +287,7 @@ def mock_make_attestations(keymap, config):
         cycle_length = config['cycle_length']
 
         in_cycle_slot_height = block.slot_number % cycle_length
-        indices = crystallized_state.indices_for_slots[cycle_length + in_cycle_slot_height]
+        indices = crystallized_state.shard_and_committee_for_slots[cycle_length + in_cycle_slot_height]
 
         print("Generating attestations for shards: %s" % len(indices))
 
