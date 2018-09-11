@@ -368,6 +368,9 @@ def compute_dynasty_transition(crystallized_state: CrystallizedState,
     crystallized_state = deepcopy(crystallized_state)
     crystallized_state.current_dynasty += 1
 
+    # Not current in spec, but should be added soon
+    crystallized_state.dynasty_start = crystallized_state.last_state_recalc
+
     next_start_shard = (crystallized_state.shard_and_committee_for_slots[-1][-1].shard_id + 1) % config['shard_count']
     crystallized_state.shard_and_committee_for_slots[config['cycle_length']:] = get_new_shuffling(
         block.parent_hash,  # stub until better RNG

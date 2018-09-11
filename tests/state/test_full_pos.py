@@ -193,3 +193,4 @@ def test_pos_finalization(genesis_crystallized_state,
         block, c, a = mock_make_child((c, a), block, config['min_dynasty_length'], [])
 
     assert c.current_dynasty == genesis_crystallized_state.current_dynasty + 1
+    assert c.dynasty_start == c.last_state_recalc
