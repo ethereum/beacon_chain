@@ -83,6 +83,8 @@ def sample_attestation_record_params():
         'oblique_parent_hashes': [],
         'shard_block_hash': b'\x20'*32,
         'attester_bitfield': b'\x33\x1F',
+        'justified_slot': 5,
+        'justified_block_hash': b'\x33'*32,
         'aggregate_sig': [0, 0],
     }
 
@@ -316,7 +318,8 @@ def mock_make_attestations(keymap, config):
                 attestation.slot.to_bytes(8, byteorder='big') +
                 b''.join(parent_hashes) +
                 shard_id.to_bytes(2, byteorder='big') +
-                attestation.shard_block_hash
+                attestation.shard_block_hash +
+                attestation.justified_slot.to_bytes(8, byteorder='big')
             )
             sigs = [
                 bls.sign(
