@@ -339,9 +339,16 @@ def compute_cycle_transitions(
     return crystallized_state, active_state
 
 
-def ready_for_dynasty_change(crystallized_state: CrystallizedState,
-                             block: 'Block',
-                             config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
+def ready_for_dynasty_transition(crystallized_state: CrystallizedState,
+                                 block: 'Block',
+                                 config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
+    slots_since_last_dynasty_change = block.slot_number - crystallized_state.dynasty_start
+    if slots_since_last_dynasty_change < config['min_dynasty_length']:
+        return False
+
+    if crystallized_state.last_finalized_slot <= crystallized_state.dynasty_start:
+        return False
+
     # gather every shard in shard_and_committee_for_slots
     required_shards = set()
     for shard_and_committee_for_slot in crystallized_state.shard_and_committee_for_slots:
@@ -349,17 +356,12 @@ def ready_for_dynasty_change(crystallized_state: CrystallizedState,
             required_shards.add(shard_and_committee.shard_id)
 
     # check that crosslinks were updated for all required shards
-    required_crosslinks_updated = True
     for shard_id, crosslink in enumerate(crystallized_state.crosslink_records):
         if shard_id in required_shards:
-            required_crosslinks_updated &= crosslink.slot > crystallized_state.dynasty_start
+            if crosslink.slot <= crystallized_state.dynasty_start:
+                return False
 
-
-    slots_since_last_dynasty_change = block.slot_number - crystallized_state.dynasty_start
-
-    return slots_since_last_dynasty_change >= config['min_dynasty_length'] and \
-           crystallized_state.last_finalized_slot > crystallized_state.dynasty_start and \
-           required_crosslinks_updated
+    return True
 
 
 def compute_dynasty_transition(crystallized_state: CrystallizedState,
@@ -409,7 +411,7 @@ def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState]
         config=config,
     )
 
-    if ready_for_dynasty_change(crystallized_state, block, config):
+    if ready_for_dynasty_transition(crystallized_state, block, config):
         crystallized_state = compute_dynasty_transition(
             crystallized_state,
             block,
