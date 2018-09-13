@@ -95,10 +95,10 @@ def get_attestation_indices(crystallized_state: 'CrystallizedState',
                             config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
     shard_id = attestation.shard_id
 
-    filtered_indices_for_slot = list(
+    filtered_shard_and_committees_for_slot = list(
         filter(
             lambda x: x.shard_id == shard_id,
-            get_indices_for_slot(
+            get_shard_and_committees_for_slot(
                 crystallized_state,
                 attestation.slot,
                 config=config,
@@ -107,8 +107,8 @@ def get_attestation_indices(crystallized_state: 'CrystallizedState',
     )
 
     attestation_indices = []  # type: List[int]
-    if filtered_indices_for_slot:
-        attestation_indices = filtered_indices_for_slot[0].committee
+    if filtered_shard_and_committees_for_slot:
+        attestation_indices = filtered_shard_and_committees_for_slot[0].committee
 
     return attestation_indices
 
@@ -192,7 +192,7 @@ def get_new_shuffling(seed: Hash32,
     return o
 
 
-def get_indices_for_slot(
+def get_shard_and_committees_for_slot(
         crystallized_state: 'CrystallizedState',
         slot: int,
         config: Dict[str, Any]=DEFAULT_CONFIG) -> List[ShardAndCommittee]:
