@@ -42,7 +42,7 @@ def get_genesis_crystallized_state(
     current_dynasty = 1
     crosslinking_start_shard = ShardId(0)
 
-    indices_for_slots = get_new_shuffling(
+    shard_and_committee_for_slots = get_new_shuffling(
         init_shuffling_seed,
         validators,
         current_dynasty,
@@ -50,14 +50,14 @@ def get_genesis_crystallized_state(
         config=config,
     )
     # concatenate with itself to span 2*CYCLE_LENGTH
-    indices_for_slots = indices_for_slots + indices_for_slots
+    shard_and_committee_for_slots = shard_and_committee_for_slots + shard_and_committee_for_slots
 
     total_deposits = config['deposit_size'] * len(validators)
 
     return CrystallizedState(
         validators=validators,
         last_state_recalc=0,
-        indices_for_slots=indices_for_slots,
+        shard_and_committee_for_slots=shard_and_committee_for_slots,
         last_justified_slot=0,
         justified_streak=0,
         last_finalized_slot=0,
@@ -70,7 +70,7 @@ def get_genesis_crystallized_state(
         ],
         total_deposits=total_deposits,
         dynasty_seed=init_shuffling_seed,
-        dynasty_seed_last_reset=1,
+        dynasty_start=0,
     )
 
 

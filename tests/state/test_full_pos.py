@@ -49,7 +49,7 @@ def test_state_transition_integration(genesis_crystallized_state,
         "Normal block with %s attestations of size %s processed in %.4f sec" %
         (
             len(attestations_of_genesis),
-            len(c.indices_for_slots[attestations_of_genesis[0].slot][0].committee),
+            len(c.shard_and_committee_for_slots[attestations_of_genesis[0].slot][0].committee),
             (time.time() - t))
         )
     print('Verified a block!')
@@ -77,14 +77,14 @@ def test_state_transition_integration(genesis_crystallized_state,
 @pytest.mark.parametrize(
     (
         'num_validators,max_validator_count,cycle_length,'
-        'min_committee_size,shard_count'
+        'min_committee_size,min_dynasty_length,shard_count'
     ),
     [
         # all of these combinations allow for full committees for
         # all shards within one cycle
-        (100, 100, 10, 5, 2),
-        (100, 1000, 50, 10, 10),
-        (1000, 1000, 20, 10, 10),
+        (100, 100, 10, 5, 20, 2),
+        (100, 1000, 50, 10, 50, 10),
+        (1000, 1000, 20, 10, 80, 10),
     ],
 )
 def test_pos_finalization(genesis_crystallized_state,
@@ -127,7 +127,7 @@ def test_pos_finalization(genesis_crystallized_state,
     # check that the expected crosslinks were updated
     expected_shards = [
         shard_and_committee.shard_id
-        for indices in c.indices_for_slots
+        for indices in c.shard_and_committee_for_slots
         for shard_and_committee in indices
     ]
     for shard_id, crosslink in enumerate(c.crosslink_records):
@@ -135,8 +135,6 @@ def test_pos_finalization(genesis_crystallized_state,
             assert crosslink.slot == c.last_state_recalc
         else:
             assert crosslink.slot == 0
-
-    crosslinks_updated_slot = c.last_state_recalc
 
     # create 100% full vote blocks to one block before cycle transition
     for i in range(config['cycle_length'] - 1):
@@ -187,12 +185,12 @@ def test_pos_finalization(genesis_crystallized_state,
     assert c.last_state_recalc == genesis_crystallized_state.last_state_recalc + config['cycle_length']*3
     assert c.justified_streak == config['cycle_length'] * 3
     assert c.last_justified_slot == c.last_state_recalc - config['cycle_length'] - 1
-    # still 0 because CYCLE_LENGTH + 1 before lsat_justified_slot is negative
+    # still 0 because CYCLE_LENGTH + 1 before last_justified_slot is negative
     assert c.last_finalized_slot == c.last_justified_slot - config['cycle_length'] - 1
 
-    # Dynasties do not ever update yet so crosslinks should not have been updated
-    for shard_id, crosslink in enumerate(c.crosslink_records):
-        if shard_id in expected_shards:
-            assert crosslink.slot == crosslinks_updated_slot
-        else:
-            assert crosslink.slot == 0
+    # force and check dynasty transition
+    if block.slot_number < config['min_dynasty_length']:
+        block, c, a = mock_make_child((c, a), block, config['min_dynasty_length'], [])
+
+    assert c.current_dynasty == genesis_crystallized_state.current_dynasty + 1
+    assert c.dynasty_start == c.last_state_recalc

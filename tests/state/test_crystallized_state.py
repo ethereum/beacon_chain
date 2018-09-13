@@ -17,7 +17,7 @@ from tests.state.helpers import (
     [
         ('validators', []),
         ('last_state_recalc', 0),
-        ('indices_for_slots', []),
+        ('shard_and_committee_for_slots', []),
         ('last_justified_slot', 0),
         ('justified_streak', 0),
         ('last_finalized_slot', 0),
@@ -26,7 +26,7 @@ from tests.state.helpers import (
         ('crosslink_records', []),
         ('total_deposits', 0),
         ('dynasty_seed', b'\x00'*32),
-        ('dynasty_seed_last_reset', 0),
+        ('dynasty_start', 0),
     ]
 )
 def test_defaults(param, default_value, sample_crystallized_state_params):

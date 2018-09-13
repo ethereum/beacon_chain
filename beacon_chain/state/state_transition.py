@@ -40,6 +40,7 @@ from .helpers import (
     get_active_validator_indices,
     get_attestation_indices,
     get_new_recent_block_hashes,
+    get_new_shuffling,
     get_signed_parent_hashes,
 )
 
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
 
 def validate_block(block: 'Block') -> bool:
     # ensure parent processed
+    # attestation from proposer of block was included with the block in the network message
     # ensure pow_chain_ref processed
     # ensure local time is large enough to process this block's slot
 
@@ -220,7 +222,7 @@ def process_updated_crosslinks(crystallized_state: CrystallizedState,
                 crystallized_state.current_dynasty > crosslinks[attestation.shard_id].dynasty):
             crosslinks[attestation.shard_id] = CrosslinkRecord(
                 dynasty=crystallized_state.current_dynasty,
-                slot=block.slot_number,
+                slot=crystallized_state.last_state_recalc + config['cycle_length'],
                 hash=attestation.shard_block_hash
             )
     return crosslinks
@@ -271,20 +273,20 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
 
     dynasty = crystallized_state.current_dynasty  # STUB
     dynasty_seed = crystallized_state.dynasty_seed  # STUB
-    dynasty_seed_last_reset = crystallized_state.dynasty_seed_last_reset  # STUB
+    dynasty_start = crystallized_state.dynasty_start
     crosslinking_start_shard = 0  # stub. Needs to see where this epoch left off
     validators = deepcopy(crystallized_state.validators)  # STUB
-    indices_for_slots = (
-        crystallized_state.indices_for_slots[cycle_length:] +
+    shard_and_committee_for_slots = (
+        crystallized_state.shard_and_committee_for_slots[cycle_length:] +
         # this is a stub and will be addressed by shuffling at dynasty change
-        crystallized_state.indices_for_slots[cycle_length:]
+        crystallized_state.shard_and_committee_for_slots[cycle_length:]
     )
     active_validator_indices = get_active_validator_indices(dynasty, validators)
 
     new_crystallized_state = CrystallizedState(
         validators=validators,
         last_state_recalc=last_state_recalc + cycle_length,
-        indices_for_slots=indices_for_slots,
+        shard_and_committee_for_slots=shard_and_committee_for_slots,
         last_justified_slot=last_justified_slot,
         justified_streak=justified_streak,
         last_finalized_slot=last_finalized_slot,
@@ -293,7 +295,7 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         crosslink_records=crosslink_records,
         total_deposits=sum(map(lambda i: validators[i].balance, active_validator_indices)),
         dynasty_seed=dynasty_seed,
-        dynasty_seed_last_reset=dynasty_seed_last_reset
+        dynasty_start=dynasty_start
     )
 
     new_active_state = ActiveState(
@@ -322,36 +324,6 @@ def fill_recent_block_hashes(active_state: ActiveState,
     )
 
 
-def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState],
-                             parent_block: 'Block',
-                             block: 'Block',
-                             config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
-    crystallized_state, active_state = parent_state
-
-    assert validate_block(block)
-
-    # Update active state to fill any missing hashes with parent block hash
-    active_state = fill_recent_block_hashes(active_state, parent_block, block)
-
-    # Initialize a new cycle if needed
-    crystallized_state, active_state = compute_cycle_transitions(
-        crystallized_state,
-        active_state,
-        block,
-        config=config,
-    )
-
-    # process per block state changes
-    active_state = process_block(
-        crystallized_state,
-        active_state,
-        block,
-        config
-    )
-
-    return crystallized_state, active_state
-
-
 def compute_cycle_transitions(
         crystallized_state: CrystallizedState,
         active_state: ActiveState,
@@ -364,4 +336,86 @@ def compute_cycle_transitions(
             block,
             config=config,
         )
+        if ready_for_dynasty_transition(crystallized_state, block, config):
+            crystallized_state = compute_dynasty_transition(
+                crystallized_state,
+                block,
+                config
+            )
+
+    return crystallized_state, active_state
+
+
+def ready_for_dynasty_transition(crystallized_state: CrystallizedState,
+                                 block: 'Block',
+                                 config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
+    slots_since_last_dynasty_change = block.slot_number - crystallized_state.dynasty_start
+    if slots_since_last_dynasty_change < config['min_dynasty_length']:
+        return False
+
+    if crystallized_state.last_finalized_slot <= crystallized_state.dynasty_start:
+        return False
+
+    # gather every shard in shard_and_committee_for_slots
+    required_shards = set()
+    for shard_and_committee_for_slot in crystallized_state.shard_and_committee_for_slots:
+        for shard_and_committee in shard_and_committee_for_slot:
+            required_shards.add(shard_and_committee.shard_id)
+
+    # check that crosslinks were updated for all required shards
+    for shard_id, crosslink in enumerate(crystallized_state.crosslink_records):
+        if shard_id in required_shards:
+            if crosslink.slot <= crystallized_state.dynasty_start:
+                return False
+
+    return True
+
+
+def compute_dynasty_transition(crystallized_state: CrystallizedState,
+                               block: 'Block',
+                               config: Dict[str, Any]=DEFAULT_CONFIG) -> CrystallizedState:
+    crystallized_state = deepcopy(crystallized_state)
+    crystallized_state.current_dynasty += 1
+
+    # Not current in spec, but should be added soon
+    crystallized_state.dynasty_start = crystallized_state.last_state_recalc
+
+    next_start_shard = (crystallized_state.shard_and_committee_for_slots[-1][-1].shard_id + 1) % config['shard_count']
+    crystallized_state.shard_and_committee_for_slots[config['cycle_length']:] = get_new_shuffling(
+        block.parent_hash,  # stub until better RNG
+        crystallized_state.validators,
+        crystallized_state.current_dynasty,
+        next_start_shard
+    )
+
+    return crystallized_state
+
+
+def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState],
+                             parent_block: 'Block',
+                             block: 'Block',
+                             config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
+    crystallized_state, active_state = parent_state
+
+    assert validate_block(block)
+
+    # Update active state to fill any missing hashes with parent block hash
+    active_state = fill_recent_block_hashes(active_state, parent_block, block)
+
+    # process per block state changes
+    active_state = process_block(
+        crystallized_state,
+        active_state,
+        block,
+        config
+    )
+
+    # Initialize a new cycle(s) if needed
+    crystallized_state, active_state = compute_cycle_transitions(
+        crystallized_state,
+        active_state,
+        block,
+        config=config,
+    )
+
     return crystallized_state, active_state

@@ -3,7 +3,7 @@ import pytest
 from beacon_chain.state.active_state import ActiveState
 from beacon_chain.state.helpers import (
     get_new_shuffling,
-    get_indices_for_slot,
+    get_shard_and_committees_for_slot,
     get_block_hash,
 )
 
@@ -85,7 +85,7 @@ def test_get_new_shuffling_handles_shard_wrap(genesis_validators, config):
         (100, 64, False),
     ],
 )
-def test_get_indices_for_slot(
+def test_get_shard_and_committees_for_slot(
         genesis_crystallized_state,
         num_validators,
         slot,
@@ -94,15 +94,15 @@ def test_get_indices_for_slot(
     crystallized_state = genesis_crystallized_state
 
     if success:
-        indices_for_slot = get_indices_for_slot(
+        shard_and_committees_for_slot = get_shard_and_committees_for_slot(
             crystallized_state,
             slot,
             config=config,
         )
-        assert len(indices_for_slot) > 0
+        assert len(shard_and_committees_for_slot) > 0
     else:
         with pytest.raises(AssertionError):
-            get_indices_for_slot(
+            get_shard_and_committees_for_slot(
                 crystallized_state,
                 slot,
                 config=config,
