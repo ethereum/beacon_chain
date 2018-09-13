@@ -222,7 +222,7 @@ def process_updated_crosslinks(crystallized_state: CrystallizedState,
                 crystallized_state.current_dynasty > crosslinks[attestation.shard_id].dynasty):
             crosslinks[attestation.shard_id] = CrosslinkRecord(
                 dynasty=crystallized_state.current_dynasty,
-                slot=block.slot_number,
+                slot=crystallized_state.last_state_recalc + config['cycle_length'],
                 hash=attestation.shard_block_hash
             )
     return crosslinks
@@ -336,6 +336,13 @@ def compute_cycle_transitions(
             block,
             config=config,
         )
+        if ready_for_dynasty_transition(crystallized_state, block, config):
+            crystallized_state = compute_dynasty_transition(
+                crystallized_state,
+                block,
+                config
+            )
+
     return crystallized_state, active_state
 
 
@@ -410,12 +417,5 @@ def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState]
         block,
         config=config,
     )
-
-    if ready_for_dynasty_transition(crystallized_state, block, config):
-        crystallized_state = compute_dynasty_transition(
-            crystallized_state,
-            block,
-            config
-        )
 
     return crystallized_state, active_state
