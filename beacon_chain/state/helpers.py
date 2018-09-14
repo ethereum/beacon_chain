@@ -10,6 +10,10 @@ from beacon_chain.beacon_typing.custom import (
     ShardId,
 )
 
+from ssz import (
+    serialize,
+)
+
 from beacon_chain.state.config import (
     DEFAULT_CONFIG,
 )
@@ -18,9 +22,6 @@ from beacon_chain.state.shard_and_committee import (
 )
 from beacon_chain.utils.blake import (
     blake,
-)
-from beacon_chain.utils.simpleserialize import (
-    serialize,
 )
 
 

@@ -1,7 +1,8 @@
-from beacon_chain.utils.blake import blake
-from beacon_chain.utils.simpleserialize import (
+from ssz import (
     serialize,
 )
+
+from beacon_chain.utils.blake import blake
 
 from beacon_chain.state.constants import (
     ZERO_HASH32,

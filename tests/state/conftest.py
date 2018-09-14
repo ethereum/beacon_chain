@@ -1,6 +1,10 @@
 import pytest
 import random
 
+from ssz import (
+    serialize,
+)
+
 from beacon_chain.state.config import (
     DEFAULT_END_DYNASTY,
     DEPOSIT_SIZE,
@@ -50,9 +54,6 @@ from beacon_chain.utils.bitfield import (
 )
 from beacon_chain.utils.blake import (
     blake,
-)
-from beacon_chain.utils.simpleserialize import (
-    serialize,
 )
 
 bls = beacon_chain.utils.bls

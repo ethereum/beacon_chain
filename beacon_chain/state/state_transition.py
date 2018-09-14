@@ -6,6 +6,10 @@ from typing import (
     TYPE_CHECKING,
 )
 
+from ssz import (
+    deepcopy,
+)
+
 from beacon_chain.beacon_typing.custom import (  # noqa: F401
     BlockVoteCache,
     Hash32,
@@ -19,9 +23,6 @@ from beacon_chain.utils.blake import (
 from beacon_chain.utils.bitfield import (
     get_bitfield_length,
     has_voted,
-)
-from beacon_chain.utils.simpleserialize import (
-    deepcopy,
 )
 
 from .config import (

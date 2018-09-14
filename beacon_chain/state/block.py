@@ -3,8 +3,11 @@ from typing import (  # noqa: F401
     Dict,
 )
 
+from ssz import (
+    serialize,
+)
+
 from beacon_chain.utils.blake import blake
-from beacon_chain.utils.simpleserialize import serialize
 
 from .attestation_record import AttestationRecord
 
