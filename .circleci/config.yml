@@ -16,19 +16,19 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-          - cache-{{.Environment.CIRCLE_JOB}}-{{ checksum "requirements.txt" }}
+          - cache-{{.Environment.CIRCLE_JOB}}-{{ checksum "setup.py" }}
 
       - run:
           name: install dependencies
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install -r requirements.txt
+            pip install -e .[dev]
 
       - save_cache:
           paths:
             - ./venv
-          key: cache-{{.Environment.CIRCLE_JOB}}-{{ checksum "requirements.txt" }}
+          key: cache-{{.Environment.CIRCLE_JOB}}-{{ checksum "setup.py" }}
 
       - run:
           name: run tests

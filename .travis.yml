@@ -2,5 +2,6 @@
   python:
     - "3.6"
   script:
+    - pip install -e .[dev]
     - pytest tests
     - mypy --follow-imports=silent --ignore-missing-imports --no-strict-optional --check-untyped-defs --disallow-incomplete-defs -p beacon_chain.state
