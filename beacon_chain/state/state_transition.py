@@ -274,7 +274,6 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
     dynasty = crystallized_state.current_dynasty  # STUB
     dynasty_seed = crystallized_state.dynasty_seed  # STUB
     dynasty_start = crystallized_state.dynasty_start
-    crosslinking_start_shard = 0  # stub. Needs to see where this epoch left off
     validators = deepcopy(crystallized_state.validators)  # STUB
     shard_and_committee_for_slots = (
         crystallized_state.shard_and_committee_for_slots[cycle_length:] +
@@ -291,7 +290,6 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         justified_streak=justified_streak,
         last_finalized_slot=last_finalized_slot,
         current_dynasty=crystallized_state.current_dynasty,
-        crosslinking_start_shard=crosslinking_start_shard,
         crosslink_records=crosslink_records,
         total_deposits=sum(map(lambda i: validators[i].balance, active_validator_indices)),
         dynasty_seed=dynasty_seed,
