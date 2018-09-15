@@ -16,20 +16,11 @@ from beacon_chain.state.config import (
     SLOT_DURATION,
     generate_config,
 )
-from beacon_chain.state.active_state import (
-    ActiveState,
-)
 from beacon_chain.state.attestation_record import (
     AttestationRecord,
 )
 from beacon_chain.state.block import (
     Block,
-)
-from beacon_chain.state.crosslink_record import (
-    CrosslinkRecord,
-)
-from beacon_chain.state.crystallized_state import (
-    CrystallizedState,
 )
 from beacon_chain.state.validator_record import (
     ValidatorRecord,
@@ -44,7 +35,6 @@ from beacon_chain.state.genesis_helpers import (
 )
 from beacon_chain.state.helpers import (
     get_hashes_to_sign,
-    get_new_shuffling,
 )
 
 import beacon_chain.utils.bls
@@ -288,7 +278,9 @@ def mock_make_attestations(keymap, config):
         cycle_length = config['cycle_length']
 
         in_cycle_slot_height = block.slot_number % cycle_length
-        indices = crystallized_state.shard_and_committee_for_slots[cycle_length + in_cycle_slot_height]
+        indices = crystallized_state.shard_and_committee_for_slots[
+            cycle_length + in_cycle_slot_height
+        ]
 
         print("Generating attestations for shards: %s" % len(indices))
 

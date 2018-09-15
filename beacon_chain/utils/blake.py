@@ -1,6 +1,6 @@
 try:
     from hashlib import blake2b
-except:
+except Exception:
     from pyblake2 import blake2b
 
 

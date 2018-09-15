@@ -3,5 +3,7 @@
     - "3.6"
   script:
     - pip install -e .[dev]
-    - pytest tests
+    - flake8 beacon_chain --max-line-length=100
+    - flake8 tests --max-line-length=100
     - mypy --follow-imports=silent --ignore-missing-imports --no-strict-optional --check-untyped-defs --disallow-incomplete-defs -p beacon_chain.state
+    - pytest tests

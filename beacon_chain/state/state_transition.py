@@ -152,7 +152,9 @@ def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
             if (has_voted(attestation.attester_bitfield, i) and
                     index not in new_block_vote_cache[parent_hash]['voter_indices']):
                 new_block_vote_cache[parent_hash]['voter_indices'].add(index)
-                new_block_vote_cache[parent_hash]['total_voter_deposits'] += crystallized_state.validators[index].balance
+                new_block_vote_cache[parent_hash]['total_voter_deposits'] += (
+                    crystallized_state.validators[index].balance
+                )
 
     return new_block_vote_cache
 
@@ -381,7 +383,11 @@ def compute_dynasty_transition(crystallized_state: CrystallizedState,
     # Not current in spec, but should be added soon
     crystallized_state.dynasty_start = crystallized_state.last_state_recalc
 
-    next_start_shard = (crystallized_state.shard_and_committee_for_slots[-1][-1].shard_id + 1) % config['shard_count']
+    next_start_shard = (
+        (crystallized_state.shard_and_committee_for_slots[-1][-1].shard_id + 1) %
+        config['shard_count']
+    )
+
     crystallized_state.shard_and_committee_for_slots[config['cycle_length']:] = get_new_shuffling(
         block.parent_hash,  # stub until better RNG
         crystallized_state.validators,
@@ -392,10 +398,11 @@ def compute_dynasty_transition(crystallized_state: CrystallizedState,
     return crystallized_state
 
 
-def compute_state_transition(parent_state: Tuple[CrystallizedState, ActiveState],
-                             parent_block: 'Block',
-                             block: 'Block',
-                             config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
+def compute_state_transition(
+        parent_state: Tuple[CrystallizedState, ActiveState],
+        parent_block: 'Block',
+        block: 'Block',
+        config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     crystallized_state, active_state = parent_state
 
     assert validate_block(block)
