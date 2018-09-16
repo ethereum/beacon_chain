@@ -110,7 +110,6 @@ def sample_crystallized_state_params():
         'justified_streak': 10,
         'last_finalized_slot': 70,
         'current_dynasty': 4,
-        'crosslinking_start_shard': 2,
         'crosslink_records': [],
         'total_deposits': 10000,
         'dynasty_seed': b'\x55'*32,

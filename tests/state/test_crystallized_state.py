@@ -22,7 +22,6 @@ from tests.state.helpers import (
         ('justified_streak', 0),
         ('last_finalized_slot', 0),
         ('current_dynasty', 0),
-        ('crosslinking_start_shard', 0),
         ('crosslink_records', []),
         ('total_deposits', 0),
         ('dynasty_seed', b'\x00'*32),

@@ -26,8 +26,6 @@ class CrystallizedState():
         'last_finalized_slot': 'int64',
         # The current dynasty
         'current_dynasty': 'int64',
-        # The next shard that crosslinking assignment will start from
-        'crosslinking_start_shard': 'int16',
         # Records about the most recent crosslink for each shard
         'crosslink_records': [CrosslinkRecord],
         # Total balance of deposits
@@ -45,7 +43,6 @@ class CrystallizedState():
         'justified_streak': 0,
         'last_finalized_slot': 0,
         'current_dynasty': 0,
-        'crosslinking_start_shard': 0,
         'crosslink_records': [],
         'total_deposits': 0,
         'dynasty_seed': b'\x00'*32,

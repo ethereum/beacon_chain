@@ -39,7 +39,6 @@ def test_get_genesis_crystallized_state(genesis_validators,
     assert crystallized_state.justified_streak == 0
     assert crystallized_state.last_finalized_slot == 0
     assert crystallized_state.current_dynasty == 1
-    assert crystallized_state.crosslinking_start_shard == 0
     assert len(crystallized_state.crosslink_records) == config['shard_count']
     for crosslink in crystallized_state.crosslink_records:
         assert crosslink.hash == ZERO_HASH32

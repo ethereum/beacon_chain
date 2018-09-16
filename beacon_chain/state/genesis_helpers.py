@@ -62,7 +62,6 @@ def get_genesis_crystallized_state(
         justified_streak=0,
         last_finalized_slot=0,
         current_dynasty=current_dynasty,
-        crosslinking_start_shard=crosslinking_start_shard,
         crosslink_records=[
             CrosslinkRecord(hash=ZERO_HASH32, slot=0, dynasty=0)
             for i
