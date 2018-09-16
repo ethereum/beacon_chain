@@ -2,10 +2,11 @@ import copy
 
 import pytest
 
-from beacon_chain.utils.blake import blake
-from beacon_chain.utils.simpleserialize import (
+from ssz import (
     serialize,
 )
+
+from beacon_chain.utils.blake import blake
 
 from beacon_chain.state.state_transition import (
     fill_recent_block_hashes,

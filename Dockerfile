@@ -1,8 +1,8 @@
 FROM python:3.6-stretch
 
 WORKDIR /usr/src/app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade setuptools
+RUN pip install -e .[dev] --no-cache-dir 
 
 COPY . .
 

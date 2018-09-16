@@ -1,10 +1,13 @@
 import time
 import pytest
 
+from ssz import (
+    serialize,
+)
+
 from beacon_chain.state.state_transition import (
     compute_state_transition,
 )
-from beacon_chain.utils.simpleserialize import serialize
 
 
 @pytest.mark.parametrize(

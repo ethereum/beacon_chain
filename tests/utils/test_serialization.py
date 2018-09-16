@@ -1,16 +1,17 @@
 import pytest
 
+from ssz import (
+    serialize,
+    deserialize,
+    eq,
+    to_dict,
+)
+
 from beacon_chain.state.active_state import (
     ActiveState,
 )
 from beacon_chain.state.partial_crosslink_record import (
     PartialCrosslinkRecord,
-)
-from beacon_chain.utils.simpleserialize import (
-    serialize,
-    deserialize,
-    eq,
-    to_dict,
 )
 
 
