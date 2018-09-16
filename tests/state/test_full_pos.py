@@ -197,7 +197,7 @@ def test_pos_finalization(genesis_crystallized_state,
     assert c.last_state_recalc == (
             genesis_crystallized_state.last_state_recalc +
             config['cycle_length'] * 3
-        )
+    )
     assert c.justified_streak == config['cycle_length'] * 3
     assert c.last_justified_slot == c.last_state_recalc - config['cycle_length'] - 1
     # still 0 because CYCLE_LENGTH + 1 before last_justified_slot is negative
