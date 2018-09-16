@@ -55,10 +55,14 @@ def test_validate_attestation_aggregate_sig():
         'result_last_finalized_slot'
     ),
     [
-        (64, 0, 0, 0, 0, 3, 2, 64, 0+64, 0),  # 2/3 attestations
-        (64, 0, 0, 0, 0, 3, 1, 64, 0+0, 0),   # 1/3 attestations
-        (64, 128, 128, 64, 0, 3, 2, 128+64, 64+64, 127-64-1),  # 2/3 attestations, last_finalized_slot = slot - cycle_length - 1
-        (64, 128, 128, 128, 128, 3, 2, 128+64, 128+64, 128),  # 2/3 attestations, last_finalized_slot = last_finalized_slot
+        # 2/3 attestations
+        (64, 0, 0, 0, 0, 3, 2, 64, 0+64, 0),
+        # 1/3 attestations
+        (64, 0, 0, 0, 0, 3, 1, 64, 0+0, 0),
+        # 2/3 attestations, last_finalized_slot = slot - cycle_length - 1
+        (64, 128, 128, 64, 0, 3, 2, 128+64, 64+64, 127-64-1),
+        # 2/3 attestations, last_finalized_slot = last_finalized_slot
+        (64, 128, 128, 128, 128, 3, 2, 128+64, 128+64, 128),
     ],
 )
 def test_initialize_new_cycle(genesis_crystallized_state,

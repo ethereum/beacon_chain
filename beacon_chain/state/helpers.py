@@ -185,7 +185,9 @@ def get_new_shuffling(seed: Hash32,
     validators_per_slot = split(shuffled_active_validator_indices, cycle_length)
     for slot, slot_indices in enumerate(validators_per_slot):
         shard_indices = split(slot_indices, committees_per_slot)
-        shard_id_start = crosslinking_start_shard + slot * committees_per_slot // slots_per_committee
+        shard_id_start = crosslinking_start_shard + (
+            slot * committees_per_slot // slots_per_committee
+        )
         o.append([ShardAndCommittee(
             shard_id=(shard_id_start + j) % shard_count,
             committee=indices

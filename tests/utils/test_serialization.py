@@ -98,11 +98,11 @@ def test_to_dict(value, result):
     ]
 )
 def test_object_to_dict(field_data):
-    class O:
+    class foo:
         fields = {name: typ for name, typ, _ in field_data}
         defaults = {name: value for name, _, value in field_data}
 
-    o = O()
+    o = foo()
     for name, _, value in field_data:
         setattr(o, name, value)
 

@@ -7,29 +7,6 @@ from beacon_chain.state.block import (
     Block,
 )
 
-# from beacon_chain.utils.bls import (
-    # privtopub,
-# )
-
-
-# def test_block_signing():
-    # block = Block()
-    # privkey = 1
-    # pubkey = privtopub(privkey)
-
-    # assert not block.verify(pubkey)
-
-    # block.sign(1)
-    # assert block.sig != [0, 0]
-    # assert block.verify(privtopub(1))
-
-    # block.sign(2)
-    # assert not block.verify(privtopub(1))
-    # assert block.verify(privtopub(2))
-
-    # block.skip_count = 1
-    # assert not block.verify(privtopub(2))
-
 
 def test_block_hash():
     block = Block()
