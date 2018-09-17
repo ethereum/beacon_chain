@@ -3,6 +3,10 @@ from typing import (  # noqa: F401
     Dict,
 )
 
+from beacon_chain.state.constants import (
+    ZERO_HASH32,
+)
+
 
 class AttestationRecord():
     fields = {
@@ -11,14 +15,18 @@ class AttestationRecord():
         'oblique_parent_hashes': ['hash32'],
         'shard_block_hash': 'hash32',
         'attester_bitfield': 'bytes',
+        'justified_slot': 'int64',
+        'justified_block_hash': 'hash32',
         'aggregate_sig': ['int256'],
     }
     defaults = {
         'slot': 0,
         'shard_id': 0,
         'oblique_parent_hashes': [],
-        'shard_block_hash': b'\x00'*32,
+        'shard_block_hash': ZERO_HASH32,
         'attester_bitfield': b'',
+        'justified_slot': 0,
+        'justified_block_hash': ZERO_HASH32,
         'aggregate_sig': [0, 0],
     }  # type: Dict[str, Any]
 

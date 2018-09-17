@@ -74,6 +74,10 @@ def validate_attestation(crystallized_state: CrystallizedState,
             (attestation.slot, block.slot_number - config['cycle_length'])
         )
 
+    # TODO: Verify that the justified_slot and justified_block_hash given are in
+    # the chain and are equal to or earlier than the last_justified_slot
+    # in the crystallized state.
+
     parent_hashes = get_signed_parent_hashes(
         active_state,
         block,
@@ -114,7 +118,8 @@ def validate_attestation(crystallized_state: CrystallizedState,
         attestation.slot.to_bytes(8, byteorder='big') +
         b''.join(parent_hashes) +
         attestation.shard_id.to_bytes(2, byteorder='big') +
-        attestation.shard_block_hash
+        attestation.shard_block_hash +
+        attestation.justified_slot.to_bytes(8, 'big')
     )
     if not bls.verify(message, bls.aggregate_pubs(pub_keys), attestation.aggregate_sig):
         raise Exception("Attestation aggregate signature fails")
