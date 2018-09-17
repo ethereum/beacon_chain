@@ -40,6 +40,7 @@ from beacon_chain.state.genesis_helpers import (
 )
 from beacon_chain.state.helpers import (
     get_hashes_to_sign,
+    get_proposer_position,
 )
 
 import beacon_chain.utils.bls
@@ -303,6 +304,12 @@ def mock_make_attestations(keymap, config):
 
         print("Generating attestations for shards: %s" % len(indices))
 
+        proposer_index_in_committee, proposer_shard_id = get_proposer_position(
+            block,
+            crystallized_state,
+            config=config,
+        )
+
         attestations = []
         for shard_and_committee in indices:
             shard_id = shard_and_committee.shard_id
@@ -327,7 +334,8 @@ def mock_make_attestations(keymap, config):
                 random.random() < attester_share for _ in range(len(committee_indices))
             ]
             # Proposer always attests
-            is_attesting[0] = True
+            if shard_id == proposer_shard_id:
+                is_attesting[proposer_index_in_committee] = True
 
             # Generating signatures and aggregating result
             parent_hashes = get_hashes_to_sign(

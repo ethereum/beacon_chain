@@ -50,6 +50,7 @@ from .helpers import (
     get_attestation_indices,
     get_new_recent_block_hashes,
     get_new_shuffling,
+    get_proposer_position,
     get_signed_parent_hashes,
 )
 
@@ -59,13 +60,47 @@ if TYPE_CHECKING:
     from .validator_record import ValidatorRecord  # noqa: F401
 
 
-def validate_block(block: 'Block') -> bool:
+def validate_block(block: 'Block',
+                   parent_block: 'Block',
+                   crystallized_state: CrystallizedState,
+                   config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
     # ensure parent processed
-    # attestation from proposer of block was included with the block in the network message
+
+    # an attestation from the proposer of the block is included along with the block in the
+    # network message object
+    validate_parent_block_proposer(
+        block,
+        parent_block,
+        crystallized_state,
+        config=config,
+    )
+
     # ensure pow_chain_ref processed
     # ensure local time is large enough to process this block's slot
 
     return True
+
+
+def validate_parent_block_proposer(block: 'Block',
+                                   parent_block: 'Block',
+                                   crystallized_state: CrystallizedState,
+                                   config: Dict[str, Any]=DEFAULT_CONFIG) -> None:
+    if block.slot_number == 0:
+        return
+
+    proposer_index_in_committee, shard_id = get_proposer_position(
+        parent_block,
+        crystallized_state,
+        config=config,
+    )
+
+    assert len(block.attestations) > 0
+    attestation = block.attestations[0]
+    if not has_voted(attestation.attester_bitfield, proposer_index_in_committee):
+        raise Exception(
+            "Proposer of parent block should be one of the attesters in block.attestions[0]:"
+            "proposer index in committee: %d" % proposer_index_in_committee
+        )
 
 
 def validate_attestation(crystallized_state: CrystallizedState,
@@ -543,7 +578,7 @@ def compute_state_transition(
         config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     crystallized_state, active_state = parent_state
 
-    assert validate_block(block)
+    validate_block(block, parent_block, crystallized_state, config=config)
 
     # Update active state to fill any missing hashes with parent block hash
     active_state = fill_recent_block_hashes(active_state, parent_block, block)
