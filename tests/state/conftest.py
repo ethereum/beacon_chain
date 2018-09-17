@@ -22,6 +22,9 @@ from beacon_chain.state.attestation_record import (
 from beacon_chain.state.block import (
     Block,
 )
+from beacon_chain.state.constants import (
+    ZERO_HASH32,
+)
 from beacon_chain.state.validator_record import (
     ValidatorRecord,
 )
@@ -298,7 +301,10 @@ def mock_make_attestations(keymap, config):
                 shard_id=shard_and_committee.shard_id,
                 oblique_parent_hashes=[],
                 shard_block_hash=blake(bytes(str(shard_id), 'utf-8')),
-                attester_bitfield=get_empty_bitfield(len(committee_indices))
+                attester_bitfield=get_empty_bitfield(len(committee_indices)),
+                justified_slot=crystallized_state.last_justified_slot,
+                # TODO: it's a stub for now and will be changed to the correct block hash
+                justified_block_hash=ZERO_HASH32,
             )
 
             # Randomly pick indices to include
