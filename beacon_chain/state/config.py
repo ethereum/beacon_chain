@@ -1,14 +1,17 @@
+BASE_REWARD_QUOTIENT = 2**15
 DEFAULT_END_DYNASTY = 9999999999999999999
-DEPOSIT_SIZE = 32  # ETH
+DEPOSIT_SIZE = 32000  # ETH * 1000
 CYCLE_LENGTH = 64  # slots
 MAX_VALIDATOR_COUNT = 2**22  # validators
 MIN_COMMITTEE_SIZE = 128  # validators
 MIN_DYNASTY_LENGTH = 256  # slots
 SHARD_COUNT = 1024  # shards
 SLOT_DURATION = 8  # seconds
+SQRT_E_DROP_TIME = 2**20  # seconds
 
 
 def generate_config(*,
+                    base_reward_quotient=BASE_REWARD_QUOTIENT,
                     default_end_dynasty=DEFAULT_END_DYNASTY,
                     deposit_size=DEPOSIT_SIZE,
                     cycle_length=CYCLE_LENGTH,
@@ -16,8 +19,10 @@ def generate_config(*,
                     min_committee_size=MIN_COMMITTEE_SIZE,
                     min_dynasty_length=MIN_DYNASTY_LENGTH,
                     shard_count=SHARD_COUNT,
-                    slot_duration=SLOT_DURATION):
+                    slot_duration=SLOT_DURATION,
+                    sqrt_e_drop_time=SQRT_E_DROP_TIME):
     return {
+        'base_reward_quotient': base_reward_quotient,
         'default_end_dynasty': default_end_dynasty,
         'deposit_size': deposit_size,
         'cycle_length': cycle_length,
@@ -25,7 +30,8 @@ def generate_config(*,
         'min_committee_size': min_committee_size,
         'min_dynasty_length': min_dynasty_length,
         'shard_count': shard_count,
-        'slot_duration': slot_duration
+        'slot_duration': slot_duration,
+        'sqrt_e_drop_time': sqrt_e_drop_time
     }
 
 
