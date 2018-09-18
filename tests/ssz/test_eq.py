@@ -4,6 +4,7 @@ from ssz.ssz import (
     eq
 )
 
+
 @pytest.mark.parametrize(
     'left_fields, right_fields, equal',
     [

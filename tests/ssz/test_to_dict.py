@@ -4,6 +4,7 @@ from ssz.ssz import (
     to_dict
 )
 
+
 @pytest.mark.parametrize(
     'value, result',
     [

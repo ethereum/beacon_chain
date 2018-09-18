@@ -1,5 +1,3 @@
-import pytest
-
 from ssz import (
     serialize,
     deserialize,
@@ -12,6 +10,7 @@ from beacon_chain.state.active_state import (
 from beacon_chain.state.partial_crosslink_record import (
     PartialCrosslinkRecord,
 )
+
 
 def test_active_state_serialization():
     s = ActiveState()

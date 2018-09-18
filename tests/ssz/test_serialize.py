@@ -1,5 +1,4 @@
 import pytest
-import random
 
 from ssz import (
     serialize,
@@ -17,6 +16,7 @@ from ssz import (
 )
 def test_basic_serialization(value, typ, data):
     assert serialize(value, typ) == data
+
 
 @pytest.mark.parametrize(
     'value, typ',

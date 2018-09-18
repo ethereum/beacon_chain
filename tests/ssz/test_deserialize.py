@@ -4,6 +4,7 @@ from ssz.ssz import (
     deserialize
 )
 
+
 @pytest.mark.parametrize(
     'value, typ, data',
     [
@@ -14,9 +15,9 @@ from ssz.ssz import (
         (b'cow', 'bytes', b'\x00\x00\x00\x03cow'),
     ]
 )
+def test_basic_deserialization(value, typ, data):
+    assert deserialize(data, typ) == value
 
-def test_basic_deserialization(value,typ,data):
-    assert deserialize(data,typ) == value
 
 @pytest.mark.parametrize(
     'data, typ',
