@@ -4,6 +4,7 @@ from ssz import (
     serialize,
 )
 
+
 @pytest.mark.parametrize(
     'value, typ, data',
     [
