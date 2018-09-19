@@ -8,7 +8,6 @@ from ssz import (
 @pytest.mark.parametrize(
     'value, typ, data',
     [
-    #uint8, uint16, uint32, uint64
         (5, 'int8', b'\x05'),
         (7, 'int16', b'\x00\x07'),
         (8, 'int32', b'\x00\x00\x00\x08'),
