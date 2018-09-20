@@ -6,25 +6,24 @@ SSZ To-Do:
 [X]Move tests to tests/ssz  
 [  ][Add full test coverage for supported types](https://github.com/ethereum/beacon_chain/issues/100)  
 [  ][Refactor ssz.py](https://github.com/ethereum/beacon_chain/issues/100)
- 
 
-## Serialization Examples 
+## Serialization Examples
 ```
 int8: 5 --> b’\x05’
 bytes: b'cow' --> b'\x00\x00\x00\x03cow'
 address: b'\x35'*20 --> b’55555555555555555555’
 hash32: b'\x35'*32 --> b’55555555555555555555555555555555’
-array: [3, 4, 5] --> [b'\x03', b'\x04', b'\x05']
+array: [3, 4, 5] --> b'\x00\x00\x00\x03\x03\x04\x05'
 ```
-## Python Usage 
+## Python Usage
 
-Serialize() takes 1 to 2 arguments. Serialize() can minimally take a value and perform standard operation, or serialize() can take a value and explicit type to shorten length of serialization. If type is not an explicitly supported type, output data will default to 4 bytes. 
+Serialize() takes 1 to 2 arguments. Serialize() can minimally take a value and perform standard operation, or serialize() can take a value and explicit type to shorten length of serialization. If type is not an explicitly supported type, output data will default to 4 bytes.
 
-Deserialize() takes 2 arguments: data and type and deserializes into preveiously serialized value 
+Deserialize() takes 2 arguments: data and type and deserializes into previously serialized value
 
-### Example 
+### Example
 
-In a general case, usage is as follows: 
+In a general case, usage is as follows:
 
 ```python
 typ = 'int8'
@@ -39,7 +38,7 @@ and to deserialize the data and print our original value we would simply use
 typ = 'int8'
 print(deserialize(b'\x05', typ))
 ```
-the above would print 
+the above would print
 5  
 Note: deserializing always requires type
 
