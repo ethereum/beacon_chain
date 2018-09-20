@@ -15,7 +15,7 @@ class ValidatorRecord():
         # The validator's current RANDAO beacon commitment
         'randao_commitment': 'hash32',
         # Current balance
-        'balance': 'int64',
+        'balance': 'int128',
         # Dynasty where the validator is inducted
         'start_dynasty': 'int64',
         # Dynasty where the validator leaves
