@@ -360,7 +360,7 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
     block_vote_cache = active_state.block_vote_cache
 
     # FFG Rewards
-    for slot in range(last_state_recalc, last_state_recalc + config['cycle_length']):
+    for slot in range(last_state_recalc - config['cycle_length'], last_state_recalc):
         # actually need a chain object.
         # This lookup breaks if span between parent and current block is too many slots
         block_hash = get_block_hash(active_state, block, slot, config=config)
@@ -391,6 +391,7 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
                     )
 
     # Crosslink Rewards
+
 
     return updated_validators
 
