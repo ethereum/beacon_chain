@@ -45,7 +45,6 @@ from .crystallized_state import (
 from .helpers import (
     get_active_validator_indices,
     get_attestation_indices,
-    get_block_hash,
     get_new_recent_block_hashes,
     get_new_shuffling,
     get_signed_parent_hashes,
@@ -54,6 +53,7 @@ from .helpers import (
 if TYPE_CHECKING:
     from .attesation_record import AttestationRecord  # noqa: F401
     from .block import Block  # noqa: F401
+    from .validator_record import ValidatorRecord  # noqa: F401
 
 
 def validate_block(block: 'Block') -> bool:
@@ -351,7 +351,7 @@ def fill_recent_block_hashes(active_state: ActiveState,
 def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
                                 active_state: ActiveState,
                                 block: 'Block',
-                                config: Dict[str, Any]=DEFAULT_CONFIG) -> ['ValidatorRecord']:
+                                config: Dict[str, Any]=DEFAULT_CONFIG) -> List['ValidatorRecord']:
     validators = crystallized_state.validators
     updated_validators = deepcopy(crystallized_state.validators)
     active_validator_indices = get_active_validator_indices(
