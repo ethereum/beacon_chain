@@ -13,13 +13,13 @@ int8: 5 --> b’\x05’
 bytes: b'cow' --> b'\x00\x00\x00\x03cow'
 address: b'\x35'*20 --> b’55555555555555555555’
 hash32: b'\x35'*32 --> b’55555555555555555555555555555555’
-array: [3, 4, 5] --> b'\x00\x00\x00\x03\x03\x04\x05'
+list['int8']: [3, 4, 5] --> b'\x00\x00\x00\x03\x03\x04\x05'
 ```
 ## Python Usage
 
-Serialize() takes 1 to 2 arguments. Serialize() can minimally take a value and perform standard operation, or serialize() can take a value and explicit type to shorten length of serialization. If type is not an explicitly supported type, output data will default to 4 bytes.
+```serialize(val, typ)``` takes 1 to 2 arguments. ```serialize(val, typ)``` can minimally take a value and perform the standard operation, or ```serialize(val, typ)``` can take a value and explicit type to shorten the length of serialization. If ```typ``` is not an explicitly supported type, output data will default to 4 bytes.
 
-Deserialize() takes 2 arguments: data and type and deserializes into previously serialized value
+```deserialize(data, typ)``` takes 2 arguments: data and type and deserializes into the previously serialized value
 
 ### Example
 
