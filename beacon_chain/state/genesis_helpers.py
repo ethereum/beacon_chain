@@ -12,6 +12,7 @@ from beacon_chain.beacon_typing.custom import (
 
 from .active_state import ActiveState
 from .block import Block
+from .chain import Chain
 from .constants import (
     ZERO_HASH32,
 )
@@ -30,7 +31,8 @@ def get_genesis_active_state(config: Dict[str, Any]) -> ActiveState:
 
     return ActiveState(
         pending_attestations=[],
-        recent_block_hashes=recent_block_hashes
+        recent_block_hashes=recent_block_hashes,
+        chain=Chain()
     )
 
 

@@ -33,6 +33,9 @@ from .config import (
 from .active_state import (
     ActiveState,
 )
+from .chain import (
+    Chain,
+)
 from .crosslink_record import (
     CrosslinkRecord,
 )
@@ -188,11 +191,16 @@ def process_block(crystallized_state: CrystallizedState,
         )
 
     new_attestations = active_state.pending_attestations + block.attestations
+    new_chain = Chain(
+        head=block,
+        blocks=active_state.chain.blocks + [block]
+    )
 
     new_active_state = ActiveState(
         pending_attestations=new_attestations,
         recent_block_hashes=active_state.recent_block_hashes[:],
-        block_vote_cache=new_block_vote_cache
+        block_vote_cache=new_block_vote_cache,
+        chain=new_chain
     )
     return new_active_state
 
@@ -361,13 +369,18 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
 
     # FFG Rewards
     for slot in range(last_state_recalc - config['cycle_length'], last_state_recalc):
-        # actually need a chain object.
-        # This lookup breaks if span between parent and current block is too many slots
-        block_hash = get_block_hash(active_state, block, slot, config=config)
-        total_participated_deposits = block_vote_cache[block_hash]['total_voter_deposits']
+        block = active_state.chain.get_block_by_slot_number(slot)
+        if block:
+            block_hash = block.hash
+            total_participated_deposits = block_vote_cache[block_hash]['total_voter_deposits']
+            voter_indices = block_vote_cache[block_hash]['total_voter_deposits']
+        else:
+            total_participated_deposits = 0.0
+            voter_indices = set()
+
         if time_since_finality <= 2 * config['cycle_length']:
             for index in active_validator_indices:
-                if index in block_vote_cache[block_hash]['voter_indices']:
+                if index in voter_indices:
                     updated_validators[index].balance = int(
                         validators[index].balance +
                         validators[index].balance *
@@ -382,7 +395,7 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
                     )
         else:
             for index in active_validator_indices:
-                if index not in block_vote_cache[block_hash]['voter_indices']:
+                if index not in voter_indices:
                     updated_validators[index].balance = int(
                         validators[index].balance -
                         validators[index].balance *
@@ -391,7 +404,6 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
                     )
 
     # Crosslink Rewards
-
 
     return updated_validators
 
