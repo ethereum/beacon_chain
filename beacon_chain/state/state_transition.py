@@ -36,6 +36,9 @@ from .active_state import (
 from .chain import (
     Chain,
 )
+from .constants import (
+    WEI_PER_ETH,
+)
 from .crosslink_record import (
     CrosslinkRecord,
 )
@@ -348,26 +351,31 @@ def fill_recent_block_hashes(active_state: ActiveState,
     )
 
 
-def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
-                                active_state: ActiveState,
-                                block: 'Block',
-                                config: Dict[str, Any]=DEFAULT_CONFIG) -> List['ValidatorRecord']:
+def calculate_ffg_rewards(crystallized_state: CrystallizedState,
+                          active_state: ActiveState,
+                          block: 'Block',
+                          config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
     validators = crystallized_state.validators
-    updated_validators = deepcopy(crystallized_state.validators)
     active_validator_indices = get_active_validator_indices(
         crystallized_state.current_dynasty,
         validators
     )
+    rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
     time_since_finality = block.slot_number - crystallized_state.last_finalized_slot
-    total_deposits = crystallized_state.total_deposits
-    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits))
+    total_deposits = sum(
+        map(
+            lambda index: validators[index].balance,
+            active_validator_indices
+        )
+    )
+    total_deposits_in_ETH = total_deposits // 10**18
+    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
     quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))
 
     last_state_recalc = crystallized_state.last_state_recalc
     block_vote_cache = active_state.block_vote_cache
 
-    # FFG Rewards
     for slot in range(last_state_recalc - config['cycle_length'], last_state_recalc):
         block = active_state.chain.get_block_by_slot_number(slot)
         if block:
@@ -375,7 +383,7 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
             total_participated_deposits = block_vote_cache[block_hash]['total_voter_deposits']
             voter_indices = block_vote_cache[block_hash]['total_voter_deposits']
         else:
-            total_participated_deposits = 0.0
+            total_participated_deposits = 0
             voter_indices = set()
 
         participating_validator_indices = filter(
@@ -389,28 +397,81 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
         # finalized recently?
         if time_since_finality <= 2 * config['cycle_length']:
             for index in participating_validator_indices:
-                updated_validators[index].balance = int(
-                    validators[index].balance +
-                    validators[index].balance *
-                    (1 / reward_quotient) *
-                    (2 * total_participated_deposits / total_deposits - 1)
+                rewards_and_penalties[index] += (
+                    validators[index].balance //
+                    reward_quotient *
+                    (2 * total_participated_deposits - total_deposits) //
+                    total_deposits
                 )
             for index in non_participating_validator_indices:
-                updated_validators[index].balance = int(
-                    validators[index].balance -
-                    validators[index].balance *
-                    (1 / reward_quotient)
+                rewards_and_penalties[index] -= (
+                    validators[index].balance //
+                    reward_quotient
                 )
         else:
             for index in non_participating_validator_indices:
-                updated_validators[index].balance = int(
-                    validators[index].balance -
+                rewards_and_penalties[index] = (
+                    validators[index].balance //
+                    reward_quotient +
                     validators[index].balance *
-                    (1 / reward_quotient) +
-                    (time_since_finality / quadratic_penalty_quotient)
+                    time_since_finality //
+                    quadratic_penalty_quotient
                 )
 
+    return rewards_and_penalties
+
+
+def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
+                                active_state: ActiveState,
+                                block: 'Block',
+                                config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
+    validators = crystallized_state.validators
+    active_validator_indices = get_active_validator_indices(
+        crystallized_state.current_dynasty,
+        validators
+    )
+    rewards_and_penalties = [0 for _ in validators]  # type: List[int]
+
+    #
+    # STUB
+    # Still need clarity in spec to properly fill these calculations
+    #
+
+    return rewards_and_penalties
+
+
+def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
+                                active_state: ActiveState,
+                                block: 'Block',
+                                config: Dict[str, Any]=DEFAULT_CONFIG) -> List['ValidatorRecord']:
+    # FFG Rewards
+    ffg_rewards = calculate_ffg_rewards(
+        crystallized_state,
+        active_state,
+        block,
+        config=config
+    )
+
     # Crosslink Rewards
+    crosslink_rewards = calculate_crosslink_rewards(
+        crystallized_state,
+        active_state,
+        block,
+        config=config
+    )
+
+    updated_validators = deepcopy(crystallized_state.validators)
+    active_validator_indices = get_active_validator_indices(
+        crystallized_state.current_dynasty,
+        crystallized_state.validators
+    )
+
+    # apply rewards and penalties
+    for index in active_validator_indices:
+        updated_validators[index].balance += (
+            ffg_rewards[index] +
+            crosslink_rewards[index]
+        )
 
     return updated_validators
 

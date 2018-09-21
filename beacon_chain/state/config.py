@@ -1,6 +1,11 @@
+from beacon_chain.state.constants import (
+    WEI_PER_ETH,
+)
+
+
 BASE_REWARD_QUOTIENT = 2**15
 DEFAULT_END_DYNASTY = 9999999999999999999
-DEPOSIT_SIZE = 32 * 10**18  # WEI
+DEPOSIT_SIZE = 32 * WEI_PER_ETH  # WEI
 CYCLE_LENGTH = 64  # slots
 MAX_VALIDATOR_COUNT = 2**22  # validators
 MIN_COMMITTEE_SIZE = 128  # validators
