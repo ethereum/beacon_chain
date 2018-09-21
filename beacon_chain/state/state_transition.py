@@ -369,7 +369,7 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
             active_validator_indices
         )
     )
-    total_deposits_in_ETH = total_deposits // 10**18
+    total_deposits_in_ETH = total_deposits // WEI_PER_ETH
     reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
     quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))
 
@@ -426,10 +426,6 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
                                 block: 'Block',
                                 config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
     validators = crystallized_state.validators
-    active_validator_indices = get_active_validator_indices(
-        crystallized_state.current_dynasty,
-        validators
-    )
     rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
     #
