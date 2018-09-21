@@ -378,30 +378,37 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
             total_participated_deposits = 0.0
             voter_indices = set()
 
+        participating_validator_indices = filter(
+            lambda index: index in voter_indices,
+            active_validator_indices
+        )
+        non_participating_validator_indices = filter(
+            lambda index: index not in voter_indices,
+            active_validator_indices
+        )
+        # finalized recently?
         if time_since_finality <= 2 * config['cycle_length']:
-            for index in active_validator_indices:
-                if index in voter_indices:
-                    updated_validators[index].balance = int(
-                        validators[index].balance +
-                        validators[index].balance *
-                        (1 / reward_quotient) *
-                        (2 * total_participated_deposits / total_deposits - 1)
-                    )
-                else:
-                    updated_validators[index].balance = int(
-                        validators[index].balance -
-                        validators[index].balance *
-                        (1 / reward_quotient)
-                    )
+            for index in participating_validator_indices:
+                updated_validators[index].balance = int(
+                    validators[index].balance +
+                    validators[index].balance *
+                    (1 / reward_quotient) *
+                    (2 * total_participated_deposits / total_deposits - 1)
+                )
+            for index in non_participating_validator_indices:
+                updated_validators[index].balance = int(
+                    validators[index].balance -
+                    validators[index].balance *
+                    (1 / reward_quotient)
+                )
         else:
-            for index in active_validator_indices:
-                if index not in voter_indices:
-                    updated_validators[index].balance = int(
-                        validators[index].balance -
-                        validators[index].balance *
-                        (1 / reward_quotient) +
-                        (time_since_finality / quadratic_penalty_quotient)
-                    )
+            for index in non_participating_validator_indices:
+                updated_validators[index].balance = int(
+                    validators[index].balance -
+                    validators[index].balance *
+                    (1 / reward_quotient) +
+                    (time_since_finality / quadratic_penalty_quotient)
+                )
 
     # Crosslink Rewards
 
