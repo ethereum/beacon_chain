@@ -17,6 +17,7 @@ from ssz import (
         (b'\x35'*20, 'address', b'\x35'*20),
         (b'\x35'*32, 'hash32', b'\x35'*32),
         (b'cow', 'bytes', b'\x00\x00\x00\x03cow'),
+        ([3, 4, 5], ['int8'], b'\x00\x00\x00\x03\x03\x04\x05'),
     ]
 )
 def test_basic_serialization(value, typ, data):
