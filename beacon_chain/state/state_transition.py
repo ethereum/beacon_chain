@@ -265,12 +265,7 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         crystallized_state.current_dynasty,
         crystallized_state.validators
     )
-    total_deposits = sum(
-        map(
-            lambda index: crystallized_state.validators[index].balance,
-            active_validator_indices
-        )
-    )
+    total_deposits = crystallized_state.total_deposits
 
     # walk through slots last_state_recalc - CYCLE_LENGTH ... last_state_recalc - 1
     # and check for justification, streaks, and finality
@@ -332,7 +327,6 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         last_finalized_slot=last_finalized_slot,
         current_dynasty=crystallized_state.current_dynasty,
         crosslink_records=crosslink_records,
-        total_deposits=sum(map(lambda i: validators[i].balance, active_validator_indices)),
         dynasty_seed=dynasty_seed,
         dynasty_start=dynasty_start
     )
@@ -375,12 +369,7 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
     rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
     time_since_finality = block.slot_number - crystallized_state.last_finalized_slot
-    total_deposits = sum(
-        map(
-            lambda index: validators[index].balance,
-            active_validator_indices
-        )
-    )
+    total_deposits = crystallized_state.total_deposits
     total_deposits_in_ETH = total_deposits // WEI_PER_ETH
     reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
     quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))

@@ -1,11 +1,14 @@
 from typing import (  # noqa: F401
     Any,
     Dict,
+    List,
 )
 
 from .crosslink_record import CrosslinkRecord
 from .shard_and_committee import ShardAndCommittee
 from .validator_record import ValidatorRecord
+
+from .helpers import get_active_validator_indices
 
 
 class CrystallizedState():
@@ -28,8 +31,6 @@ class CrystallizedState():
         'current_dynasty': 'int64',
         # Records about the most recent crosslink for each shard
         'crosslink_records': [CrosslinkRecord],
-        # Total balance of deposits
-        'total_deposits': 'int256',
         # Used to select the committees for each shard
         'dynasty_seed': 'hash32',
         # start of the current dynasty
@@ -44,7 +45,6 @@ class CrystallizedState():
         'last_finalized_slot': 0,
         'current_dynasty': 0,
         'crosslink_records': [],
-        'total_deposits': 0,
         'dynasty_seed': b'\x00'*32,
         'dynasty_start': 0,
     }  # type: Dict[str, Any]
@@ -59,6 +59,23 @@ class CrystallizedState():
 
     def __getattribute__(self, name: str) -> Any:
         return super().__getattribute__(name)
+
+    @property
+    def active_validator_indices(self) -> List[int]:
+        return get_active_validator_indices(
+            self.current_dynasty,
+            self.validators
+        )
+
+    @property
+    def total_deposits(self) -> int:
+        return sum(
+            map(
+                lambda index: self.validators[index].balance,
+                self.active_validator_indices
+            )
+        )
+
 
     @property
     def num_validators(self) -> int:
