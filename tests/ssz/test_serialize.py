@@ -30,7 +30,7 @@ def test_basic_serialization(value, typ, data):
         (b'', 'byte'),
         (b'', 'hash16'),
         (0, 0),
-        (-5, 'int32'),
+        (-5, 'uint32'),
     ]
 )
 def test_failed_serialization(value, typ):

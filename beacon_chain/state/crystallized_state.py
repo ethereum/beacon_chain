@@ -13,27 +13,27 @@ class CrystallizedState():
         # List of validators
         'validators': [ValidatorRecord],
         # Last CrystallizedState recalculation
-        'last_state_recalc': 'int64',
+        'last_state_recalc': 'uint64',
         # What active validators are part of the attester set
         # at what height, and in what shard. Starts at slot
         # last_state_recalc - CYCLE_LENGTH
         'shard_and_committee_for_slots': [[ShardAndCommittee]],
         # The last justified slot
-        'last_justified_slot': 'int64',
+        'last_justified_slot': 'uint64',
         # Number of consecutive justified slots ending at this one
-        'justified_streak': 'int64',
+        'justified_streak': 'uint64',
         # The last finalized slot
-        'last_finalized_slot': 'int64',
+        'last_finalized_slot': 'uint64',
         # The current dynasty
-        'current_dynasty': 'int64',
+        'current_dynasty': 'uint64',
         # Records about the most recent crosslink for each shard
         'crosslink_records': [CrosslinkRecord],
         # Total balance of deposits
-        'total_deposits': 'int256',
+        'total_deposits': 'uint256',
         # Used to select the committees for each shard
         'dynasty_seed': 'hash32',
         # start of the current dynasty
-        'dynasty_start': 'int64',
+        'dynasty_start': 'uint64',
     }
     defaults = {
         'validators': [],

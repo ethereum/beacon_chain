@@ -8,7 +8,7 @@ class PartialCrosslinkRecord():
 
     fields = {
         # What shard is the crosslink being made for
-        'shard_id': 'int16',
+        'shard_id': 'uint16',
         # Hash of the block
         'shard_block_hash': 'hash32',
         # Which of the eligible voters are voting for it (as a bitfield)

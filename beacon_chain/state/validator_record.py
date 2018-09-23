@@ -7,19 +7,19 @@ from typing import (  # noqa: F401
 class ValidatorRecord():
     fields = {
         # The validator's public key
-        'pubkey': 'int256',
+        'pubkey': 'uint256',
         # What shard the validator's balance will be sent to after withdrawal
-        'withdrawal_shard': 'int16',
+        'withdrawal_shard': 'uint16',
         # And what address
         'withdrawal_address': 'address',
         # The validator's current RANDAO beacon commitment
         'randao_commitment': 'hash32',
         # Current balance
-        'balance': 'int128',
+        'balance': 'uint128',
         # Dynasty where the validator is inducted
-        'start_dynasty': 'int64',
+        'start_dynasty': 'uint64',
         # Dynasty where the validator leaves
-        'end_dynasty': 'int64'
+        'end_dynasty': 'uint64'
     }
 
     defaults = {

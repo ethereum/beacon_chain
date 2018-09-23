@@ -7,11 +7,11 @@ from typing import (  # noqa: F401
 class RecentProposerRecord():
     fields = {
         # Proposer index
-        'index': 'int24',
+        'index': 'uint24',
         # New RANDAO commitment
         'randao_commitment': 'hash32',
         # Balance delta
-        'balance_delta': 'int24'
+        'balance_delta': 'uint24'
     }
     defaults = {
         'randao_commitment': b'\x00'*32,

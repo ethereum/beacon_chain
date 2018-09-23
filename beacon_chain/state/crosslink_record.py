@@ -7,9 +7,9 @@ from typing import (  # noqa: F401
 class CrosslinkRecord():
     fields = {
         # What dynasty the crosslink was submitted in
-        'dynasty': 'int64',
+        'dynasty': 'uint64',
         # slot during which crosslink was added
-        'slot': 'int64',
+        'slot': 'uint64',
         # The block hash
         'hash': 'hash32',
     }
