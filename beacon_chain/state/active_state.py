@@ -4,6 +4,7 @@ from typing import (  # noqa: F401
 )
 
 from .attestation_record import AttestationRecord
+from .chain import Chain
 
 
 class ActiveState():
@@ -30,6 +31,13 @@ class ActiveState():
             self.block_vote_cache = kwargs['block_vote_cache']
         else:
             self.block_vote_cache = {}
+
+        # chain is not part of protocol state
+        # is used as helper class to aid in doing state transition
+        if 'chain' in kwargs:
+            self.chain = kwargs['chain']
+        else:
+            self.chain = Chain()
 
     def __setattr__(self, name: str, value: Any) -> None:
         super().__setattr__(name, value)

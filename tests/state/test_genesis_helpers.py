@@ -18,6 +18,8 @@ def test_get_genesis_active_state(config):
     active_state = get_genesis_active_state(config)
     assert active_state.num_pending_attestations == 0
     assert active_state.num_recent_block_hashes == config['cycle_length'] * 2
+    assert len(active_state.chain.blocks) == 0
+    assert active_state.chain.head is None
 
 
 def test_get_genesis_crystallized_state(genesis_validators,

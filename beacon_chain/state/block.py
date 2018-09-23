@@ -8,6 +8,9 @@ from ssz import (
 )
 
 from beacon_chain.utils.blake import blake
+from beacon_chain.state.constants import (
+    ZERO_HASH32,
+)
 
 from .attestation_record import AttestationRecord
 
@@ -31,13 +34,13 @@ class Block():
     }  # type: Dict[str, Any]
 
     defaults = {
-        'parent_hash': b'\x00'*32,
+        'parent_hash': ZERO_HASH32,
         'slot_number': 0,
-        'randao_reveal': b'\x00'*32,
+        'randao_reveal': ZERO_HASH32,
         'attestations': [],
-        'pow_chain_ref': b'\x00'*32,
-        'active_state_root': b'\x00'*32,
-        'crystallized_state_root': b'\x00'*32,
+        'pow_chain_ref': ZERO_HASH32,
+        'active_state_root': ZERO_HASH32,
+        'crystallized_state_root': ZERO_HASH32,
     }
 
     def __init__(self, **kwargs):

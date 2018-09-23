@@ -1,3 +1,5 @@
+from math import sqrt
+
 from typing import (
     Any,
     Dict,
@@ -31,6 +33,12 @@ from .config import (
 from .active_state import (
     ActiveState,
 )
+from .chain import (
+    Chain,
+)
+from .constants import (
+    WEI_PER_ETH,
+)
 from .crosslink_record import (
     CrosslinkRecord,
 )
@@ -48,6 +56,7 @@ from .helpers import (
 if TYPE_CHECKING:
     from .attesation_record import AttestationRecord  # noqa: F401
     from .block import Block  # noqa: F401
+    from .validator_record import ValidatorRecord  # noqa: F401
 
 
 def validate_block(block: 'Block') -> bool:
@@ -185,11 +194,16 @@ def process_block(crystallized_state: CrystallizedState,
         )
 
     new_attestations = active_state.pending_attestations + block.attestations
+    new_chain = Chain(
+        head=block,
+        blocks=active_state.chain.blocks + [block]
+    )
 
     new_active_state = ActiveState(
         pending_attestations=new_attestations,
         recent_block_hashes=active_state.recent_block_hashes[:],
-        block_vote_cache=new_block_vote_cache
+        block_vote_cache=new_block_vote_cache,
+        chain=new_chain
     )
     return new_active_state
 
@@ -282,7 +296,14 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
     dynasty = crystallized_state.current_dynasty  # STUB
     dynasty_seed = crystallized_state.dynasty_seed  # STUB
     dynasty_start = crystallized_state.dynasty_start
-    validators = deepcopy(crystallized_state.validators)  # STUB
+
+    validators = apply_rewards_and_penalties(
+        crystallized_state,
+        active_state,
+        block,
+        config=config
+    )
+
     shard_and_committee_for_slots = (
         crystallized_state.shard_and_committee_for_slots[cycle_length:] +
         # this is a stub and will be addressed by shuffling at dynasty change
@@ -330,26 +351,125 @@ def fill_recent_block_hashes(active_state: ActiveState,
     )
 
 
-def compute_cycle_transitions(
-        crystallized_state: CrystallizedState,
-        active_state: ActiveState,
-        block: 'Block',
-        config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
-    while block.slot_number >= crystallized_state.last_state_recalc + config['cycle_length']:
-        crystallized_state, active_state = initialize_new_cycle(
-            crystallized_state,
-            active_state,
-            block,
-            config=config,
-        )
-        if ready_for_dynasty_transition(crystallized_state, block, config):
-            crystallized_state = compute_dynasty_transition(
-                crystallized_state,
-                block,
-                config
-            )
+def calculate_ffg_rewards(crystallized_state: CrystallizedState,
+                          active_state: ActiveState,
+                          block: 'Block',
+                          config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
+    validators = crystallized_state.validators
+    active_validator_indices = get_active_validator_indices(
+        crystallized_state.current_dynasty,
+        validators
+    )
+    rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
-    return crystallized_state, active_state
+    time_since_finality = block.slot_number - crystallized_state.last_finalized_slot
+    total_deposits = sum(
+        map(
+            lambda index: validators[index].balance,
+            active_validator_indices
+        )
+    )
+    total_deposits_in_ETH = total_deposits // WEI_PER_ETH
+    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
+    quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))
+
+    last_state_recalc = crystallized_state.last_state_recalc
+    block_vote_cache = active_state.block_vote_cache
+
+    for slot in range(last_state_recalc - config['cycle_length'], last_state_recalc):
+        block = active_state.chain.get_block_by_slot_number(slot)
+        if block:
+            block_hash = block.hash
+            total_participated_deposits = block_vote_cache[block_hash]['total_voter_deposits']
+            voter_indices = block_vote_cache[block_hash]['total_voter_deposits']
+        else:
+            total_participated_deposits = 0
+            voter_indices = set()
+
+        participating_validator_indices = filter(
+            lambda index: index in voter_indices,
+            active_validator_indices
+        )
+        non_participating_validator_indices = filter(
+            lambda index: index not in voter_indices,
+            active_validator_indices
+        )
+        # finalized recently?
+        if time_since_finality <= 2 * config['cycle_length']:
+            for index in participating_validator_indices:
+                rewards_and_penalties[index] += (
+                    validators[index].balance //
+                    reward_quotient *
+                    (2 * total_participated_deposits - total_deposits) //
+                    total_deposits
+                )
+            for index in non_participating_validator_indices:
+                rewards_and_penalties[index] -= (
+                    validators[index].balance //
+                    reward_quotient
+                )
+        else:
+            for index in non_participating_validator_indices:
+                rewards_and_penalties[index] = (
+                    validators[index].balance //
+                    reward_quotient +
+                    validators[index].balance *
+                    time_since_finality //
+                    quadratic_penalty_quotient
+                )
+
+    return rewards_and_penalties
+
+
+def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
+                                active_state: ActiveState,
+                                block: 'Block',
+                                config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
+    validators = crystallized_state.validators
+    rewards_and_penalties = [0 for _ in validators]  # type: List[int]
+
+    #
+    # STUB
+    # Still need clarity in spec to properly fill these calculations
+    #
+
+    return rewards_and_penalties
+
+
+def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
+                                active_state: ActiveState,
+                                block: 'Block',
+                                config: Dict[str, Any]=DEFAULT_CONFIG) -> List['ValidatorRecord']:
+    # FFG Rewards
+    ffg_rewards = calculate_ffg_rewards(
+        crystallized_state,
+        active_state,
+        block,
+        config=config
+    )
+
+    # Crosslink Rewards
+    crosslink_rewards = calculate_crosslink_rewards(
+        crystallized_state,
+        active_state,
+        block,
+        config=config
+    )
+
+    updated_validators = deepcopy(crystallized_state.validators)
+    active_validator_indices = get_active_validator_indices(
+        crystallized_state.current_dynasty,
+        crystallized_state.validators
+    )
+
+    # apply rewards and penalties
+    for index in active_validator_indices:
+        updated_validators[index].balance += (
+            ffg_rewards[index] +
+            crosslink_rewards[index]
+        )
+
+    return updated_validators
 
 
 def ready_for_dynasty_transition(crystallized_state: CrystallizedState,
@@ -399,6 +519,29 @@ def compute_dynasty_transition(crystallized_state: CrystallizedState,
     )
 
     return crystallized_state
+
+
+def compute_cycle_transitions(
+        crystallized_state: CrystallizedState,
+        active_state: ActiveState,
+        block: 'Block',
+        config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
+    while block.slot_number >= crystallized_state.last_state_recalc + config['cycle_length']:
+        crystallized_state, active_state = initialize_new_cycle(
+            crystallized_state,
+            active_state,
+            block,
+            config=config
+        )
+
+        if ready_for_dynasty_transition(crystallized_state, block, config):
+            crystallized_state = compute_dynasty_transition(
+                crystallized_state,
+                block,
+                config=config
+            )
+
+    return crystallized_state, active_state
 
 
 def compute_state_transition(
