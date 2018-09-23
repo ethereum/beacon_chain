@@ -6,9 +6,6 @@ from beacon_chain.state.crystallized_state import (
 from beacon_chain.state.crosslink_record import (
     CrosslinkRecord,
 )
-from beacon_chain.state.helpers import (
-    get_active_validator_indices,
-)
 
 from tests.state.helpers import (
     mock_validator_record,

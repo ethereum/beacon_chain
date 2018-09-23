@@ -261,10 +261,6 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
     last_finalized_slot = crystallized_state.last_finalized_slot
     justified_streak = crystallized_state.justified_streak
 
-    active_validator_indices = get_active_validator_indices(
-        crystallized_state.current_dynasty,
-        crystallized_state.validators
-    )
     total_deposits = crystallized_state.total_deposits
 
     # walk through slots last_state_recalc - CYCLE_LENGTH ... last_state_recalc - 1
@@ -300,10 +296,6 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         if a.slot >= last_state_recalc
     ]
 
-    dynasty = crystallized_state.current_dynasty  # STUB
-    dynasty_seed = crystallized_state.dynasty_seed  # STUB
-    dynasty_start = crystallized_state.dynasty_start
-
     validators = apply_rewards_and_penalties(
         crystallized_state,
         active_state,
@@ -316,7 +308,6 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         # this is a stub and will be addressed by shuffling at dynasty change
         crystallized_state.shard_and_committee_for_slots[cycle_length:]
     )
-    active_validator_indices = get_active_validator_indices(dynasty, validators)
 
     new_crystallized_state = CrystallizedState(
         validators=validators,
@@ -327,8 +318,8 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         last_finalized_slot=last_finalized_slot,
         current_dynasty=crystallized_state.current_dynasty,
         crosslink_records=crosslink_records,
-        dynasty_seed=dynasty_seed,
-        dynasty_start=dynasty_start
+        dynasty_seed=crystallized_state.dynasty_seed,
+        dynasty_start=crystallized_state.dynasty_start
     )
 
     new_active_state = ActiveState(

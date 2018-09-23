@@ -76,7 +76,6 @@ class CrystallizedState():
             )
         )
 
-
     @property
     def num_validators(self) -> int:
         return len(self.validators)

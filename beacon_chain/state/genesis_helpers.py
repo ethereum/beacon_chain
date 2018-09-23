@@ -54,7 +54,6 @@ def get_genesis_crystallized_state(
     # concatenate with itself to span 2*CYCLE_LENGTH
     shard_and_committee_for_slots = shard_and_committee_for_slots + shard_and_committee_for_slots
 
-
     return CrystallizedState(
         validators=validators,
         last_state_recalc=0,
