@@ -260,6 +260,18 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
     last_justified_slot = crystallized_state.last_justified_slot
     last_finalized_slot = crystallized_state.last_finalized_slot
     justified_streak = crystallized_state.justified_streak
+
+    active_validator_indices = get_active_validator_indices(
+        crystallized_state.current_dynasty,
+        crystallized_state.validators
+    )
+    total_deposits = sum(
+        map(
+            lambda index: crystallized_state.validators[index].balance,
+            active_validator_indices
+        )
+    )
+
     # walk through slots last_state_recalc - CYCLE_LENGTH ... last_state_recalc - 1
     # and check for justification, streaks, and finality
     for i in range(cycle_length):
@@ -271,7 +283,7 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         else:
             vote_balance = 0
 
-        if 3 * vote_balance >= 2 * crystallized_state.total_deposits:
+        if 3 * vote_balance >= 2 * total_deposits:
             last_justified_slot = max(last_justified_slot, slot)
             justified_streak += 1
         else:

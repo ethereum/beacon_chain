@@ -48,21 +48,20 @@ def test_validate_attestation_aggregate_sig():
         'last_justified_slot,'
         'justified_streak,'
         'last_finalized_slot,'
-        'crystallized_state_total_deposits,'
-        'block_vote_cache_total_deposits,'
+        'fraction_voted,'
         'result_last_state_recalc,'
         'result_justified_streak,'
         'result_last_finalized_slot'
     ),
     [
         # 2/3 attestations
-        (64, 0, 0, 0, 0, 3, 2, 64, 0+64, 0),
+        (64, 0, 0, 0, 0, 2/3.0, 64, 0+64, 0),
         # 1/3 attestations
-        (64, 0, 0, 0, 0, 3, 1, 64, 0+0, 0),
+        (64, 0, 0, 0, 0, 1/3.0, 64, 0+0, 0),
         # 2/3 attestations, last_finalized_slot = slot - cycle_length - 1
-        (64, 128, 128, 64, 0, 3, 2, 128+64, 64+64, 127-64-1),
+        (64, 128, 128, 64, 0, 2/3.0, 128+64, 64+64, 127-64-1),
         # 2/3 attestations, last_finalized_slot = last_finalized_slot
-        (64, 128, 128, 128, 128, 3, 2, 128+64, 128+64, 128),
+        (64, 128, 128, 128, 128, 2/3.0, 128+64, 128+64, 128),
     ],
 )
 def test_initialize_new_cycle(genesis_crystallized_state,
@@ -72,8 +71,7 @@ def test_initialize_new_cycle(genesis_crystallized_state,
                               last_justified_slot,
                               justified_streak,
                               last_finalized_slot,
-                              crystallized_state_total_deposits,
-                              block_vote_cache_total_deposits,
+                              fraction_voted,
                               result_last_state_recalc,
                               result_justified_streak,
                               result_last_finalized_slot,
@@ -84,7 +82,6 @@ def test_initialize_new_cycle(genesis_crystallized_state,
     parent_crystallized_state.last_justified_slot = last_justified_slot
     parent_crystallized_state.justified_streak = justified_streak
     parent_crystallized_state.last_finalized_slot = last_finalized_slot
-    parent_crystallized_state.total_deposits = crystallized_state_total_deposits
 
     parent_active_state = genesis_active_state
 
@@ -96,10 +93,18 @@ def test_initialize_new_cycle(genesis_crystallized_state,
     active_state = fill_recent_block_hashes(
         parent_active_state, parent_block, block
     )
+    total_deposits = sum(
+        map(
+            lambda validator: validator.balance,
+            parent_crystallized_state.validators
+        )
+    )
+
+    fraction_voted *= 1.01  # add margin for rounding error
     # Fill the total_voter_deposits to simulate the different committee results
     active_state.block_vote_cache[block.parent_hash] = {
         'voter_indices': set(),
-        'total_voter_deposits': block_vote_cache_total_deposits,
+        'total_voter_deposits': int(total_deposits * fraction_voted)
     }
 
     crystallized_state, active_state = initialize_new_cycle(
