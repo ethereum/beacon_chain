@@ -10,6 +10,11 @@ def serialize(val, typ=None):
     elif isinstance(typ, str) and typ[:3] == 'int':
         length = int(typ[3:])
         assert length % 8 == 0
+        return val.to_bytes(length // 8, 'big', signed=True)
+    elif isinstance(typ, str) and typ[:4] == 'uint':
+        length = int(typ[4:])
+        assert length % 8 == 0
+        assert val >= 0
         return val.to_bytes(length // 8, 'big')
     elif typ == 'bytes':
         return len(val).to_bytes(4, 'big') + val
@@ -32,6 +37,11 @@ def _deserialize(data, start, typ):
         return data[start: start+length], start+length
     elif isinstance(typ, str) and typ[:3] == 'int':
         length = int(typ[3:])
+        assert length % 8 == 0
+        assert len(data) + start >= length // 8
+        return int.from_bytes(data[start: start+length//8], 'big', signed=True), start+length//8
+    elif isinstance(typ, str) and typ[:4] == 'uint':
+        length = int(typ[4:])
         assert length % 8 == 0
         assert len(data) + start >= length // 8
         return int.from_bytes(data[start: start+length//8], 'big'), start+length//8
