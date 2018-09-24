@@ -118,7 +118,6 @@ def sample_crystallized_state_params():
         'last_finalized_slot': 70,
         'current_dynasty': 4,
         'crosslink_records': [],
-        'total_deposits': 10000,
         'dynasty_seed': b'\x55'*32,
         'dynasty_start': 3,
     }

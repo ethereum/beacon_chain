@@ -54,8 +54,6 @@ def get_genesis_crystallized_state(
     # concatenate with itself to span 2*CYCLE_LENGTH
     shard_and_committee_for_slots = shard_and_committee_for_slots + shard_and_committee_for_slots
 
-    total_deposits = config['deposit_size'] * len(validators)
-
     return CrystallizedState(
         validators=validators,
         last_state_recalc=0,
@@ -69,7 +67,6 @@ def get_genesis_crystallized_state(
             for i
             in range(config['shard_count'])
         ],
-        total_deposits=total_deposits,
         dynasty_seed=init_shuffling_seed,
         dynasty_start=0,
     )

@@ -260,6 +260,9 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
     last_justified_slot = crystallized_state.last_justified_slot
     last_finalized_slot = crystallized_state.last_finalized_slot
     justified_streak = crystallized_state.justified_streak
+
+    total_deposits = crystallized_state.total_deposits
+
     # walk through slots last_state_recalc - CYCLE_LENGTH ... last_state_recalc - 1
     # and check for justification, streaks, and finality
     for i in range(cycle_length):
@@ -271,7 +274,7 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         else:
             vote_balance = 0
 
-        if 3 * vote_balance >= 2 * crystallized_state.total_deposits:
+        if 3 * vote_balance >= 2 * total_deposits:
             last_justified_slot = max(last_justified_slot, slot)
             justified_streak += 1
         else:
@@ -293,10 +296,6 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         if a.slot >= last_state_recalc
     ]
 
-    dynasty = crystallized_state.current_dynasty  # STUB
-    dynasty_seed = crystallized_state.dynasty_seed  # STUB
-    dynasty_start = crystallized_state.dynasty_start
-
     validators = apply_rewards_and_penalties(
         crystallized_state,
         active_state,
@@ -309,7 +308,6 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         # this is a stub and will be addressed by shuffling at dynasty change
         crystallized_state.shard_and_committee_for_slots[cycle_length:]
     )
-    active_validator_indices = get_active_validator_indices(dynasty, validators)
 
     new_crystallized_state = CrystallizedState(
         validators=validators,
@@ -320,9 +318,8 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         last_finalized_slot=last_finalized_slot,
         current_dynasty=crystallized_state.current_dynasty,
         crosslink_records=crosslink_records,
-        total_deposits=sum(map(lambda i: validators[i].balance, active_validator_indices)),
-        dynasty_seed=dynasty_seed,
-        dynasty_start=dynasty_start
+        dynasty_seed=crystallized_state.dynasty_seed,
+        dynasty_start=crystallized_state.dynasty_start
     )
 
     new_active_state = ActiveState(
@@ -363,12 +360,7 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
     rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
     time_since_finality = block.slot_number - crystallized_state.last_finalized_slot
-    total_deposits = sum(
-        map(
-            lambda index: validators[index].balance,
-            active_validator_indices
-        )
-    )
+    total_deposits = crystallized_state.total_deposits
     total_deposits_in_ETH = total_deposits // WEI_PER_ETH
     reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
     quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))
