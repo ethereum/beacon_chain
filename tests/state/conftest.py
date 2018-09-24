@@ -6,6 +6,7 @@ from ssz import (
 )
 
 from beacon_chain.state.config import (
+    BASE_REWARD_QUOTIENT,
     DEFAULT_END_DYNASTY,
     DEPOSIT_SIZE,
     CYCLE_LENGTH,
@@ -14,6 +15,7 @@ from beacon_chain.state.config import (
     MIN_DYNASTY_LENGTH,
     SHARD_COUNT,
     SLOT_DURATION,
+    SQRT_E_DROP_TIME,
     generate_config,
 )
 from beacon_chain.state.attestation_record import (
@@ -116,7 +118,6 @@ def sample_crystallized_state_params():
         'last_finalized_slot': 70,
         'current_dynasty': 4,
         'crosslink_records': [],
-        'total_deposits': 10000,
         'dynasty_seed': b'\x55'*32,
         'dynasty_start': 3,
     }
@@ -156,6 +157,11 @@ def init_shuffling_seed():
 @pytest.fixture
 def init_randao():
     return DEFAULT_RANDAO
+
+
+@pytest.fixture
+def base_reward_quotient():
+    return BASE_REWARD_QUOTIENT
 
 
 @pytest.fixture
@@ -199,15 +205,23 @@ def slot_duration():
 
 
 @pytest.fixture
-def config(default_end_dynasty,
+def sqrt_e_drop_time():
+    return SQRT_E_DROP_TIME
+
+
+@pytest.fixture
+def config(base_reward_quotient,
+           default_end_dynasty,
            deposit_size,
            cycle_length,
            max_validator_count,
            min_committee_size,
            min_dynasty_length,
            shard_count,
-           slot_duration):
+           slot_duration,
+           sqrt_e_drop_time):
     return generate_config(
+        base_reward_quotient=base_reward_quotient,
         default_end_dynasty=default_end_dynasty,
         deposit_size=deposit_size,
         cycle_length=cycle_length,
@@ -215,7 +229,8 @@ def config(default_end_dynasty,
         min_committee_size=min_committee_size,
         min_dynasty_length=min_dynasty_length,
         shard_count=shard_count,
-        slot_duration=slot_duration
+        slot_duration=slot_duration,
+        sqrt_e_drop_time=sqrt_e_drop_time
     )
 
 

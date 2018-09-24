@@ -3,7 +3,7 @@
 > Implements a proof of concept beacon chain for a sharded pos ethereum 2.0. Spec in progress can be found [here](https://notes.ethereum.org/s/Syj3QZSxm).
 
 ## Installation
-Using a python3 environment, run the following to install required libraries:
+Using a python3.6.* environment, run the following to install required libraries:
 ```
 pip install -e .[dev]
 ```
@@ -27,5 +27,5 @@ make deploy
 
 ---
 
-# Simple Serialization
+# Simple Serialize
 [here](https://github.com/ethereum/beacon_chain/tree/master/ssz)

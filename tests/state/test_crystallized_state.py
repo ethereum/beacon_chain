@@ -23,7 +23,6 @@ from tests.state.helpers import (
         ('last_finalized_slot', 0),
         ('current_dynasty', 0),
         ('crosslink_records', []),
-        ('total_deposits', 0),
         ('dynasty_seed', b'\x00'*32),
         ('dynasty_start', 0),
     ]
@@ -59,3 +58,33 @@ def test_num_crosslink_records(expected):
     )
 
     assert crystallized_state.num_crosslink_records == expected
+
+
+@pytest.mark.parametrize(
+    'num_active_validators',
+    [
+        (0),
+        (1),
+        (5),
+        (20),
+    ]
+)
+def test_total_deposits(num_active_validators, config):
+    start_dynasty = 10
+    active_validators = [
+        mock_validator_record(pubkey, start_dynasty=start_dynasty)
+        for pubkey in range(num_active_validators)
+    ]
+    non_active_validators = [
+        mock_validator_record(pubkey, start_dynasty=start_dynasty+1)
+        for pubkey in range(4)
+    ]
+    crystallized_state = CrystallizedState(
+        validators=active_validators + non_active_validators,
+        current_dynasty=start_dynasty
+    )
+
+    assert len(crystallized_state.active_validator_indices) == len(active_validators)
+
+    expected_total_deposits = config['deposit_size'] * num_active_validators
+    assert crystallized_state.total_deposits == expected_total_deposits

@@ -12,6 +12,7 @@ from beacon_chain.beacon_typing.custom import (
 
 from .active_state import ActiveState
 from .block import Block
+from .chain import Chain
 from .constants import (
     ZERO_HASH32,
 )
@@ -30,7 +31,8 @@ def get_genesis_active_state(config: Dict[str, Any]) -> ActiveState:
 
     return ActiveState(
         pending_attestations=[],
-        recent_block_hashes=recent_block_hashes
+        recent_block_hashes=recent_block_hashes,
+        chain=Chain()
     )
 
 
@@ -52,8 +54,6 @@ def get_genesis_crystallized_state(
     # concatenate with itself to span 2*CYCLE_LENGTH
     shard_and_committee_for_slots = shard_and_committee_for_slots + shard_and_committee_for_slots
 
-    total_deposits = config['deposit_size'] * len(validators)
-
     return CrystallizedState(
         validators=validators,
         last_state_recalc=0,
@@ -67,7 +67,6 @@ def get_genesis_crystallized_state(
             for i
             in range(config['shard_count'])
         ],
-        total_deposits=total_deposits,
         dynasty_seed=init_shuffling_seed,
         dynasty_start=0,
     )
