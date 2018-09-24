@@ -31,8 +31,6 @@ class CrystallizedState():
         'current_dynasty': 'uint64',
         # Records about the most recent crosslink for each shard
         'crosslink_records': [CrosslinkRecord],
-        # Total balance of deposits
-        'total_deposits': 'uint256',
         # Used to select the committees for each shard
         'dynasty_seed': 'hash32',
         # start of the current dynasty
