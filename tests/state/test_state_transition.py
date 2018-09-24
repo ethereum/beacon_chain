@@ -93,18 +93,12 @@ def test_initialize_new_cycle(genesis_crystallized_state,
     active_state = fill_recent_block_hashes(
         parent_active_state, parent_block, block
     )
-    total_deposits = sum(
-        map(
-            lambda validator: validator.balance,
-            parent_crystallized_state.validators
-        )
-    )
 
     fraction_voted *= 1.01  # add margin for rounding error
     # Fill the total_voter_deposits to simulate the different committee results
     active_state.block_vote_cache[block.parent_hash] = {
         'voter_indices': set(),
-        'total_voter_deposits': int(total_deposits * fraction_voted)
+        'total_voter_deposits': int(parent_crystallized_state.total_deposits * fraction_voted)
     }
 
     crystallized_state, active_state = initialize_new_cycle(
