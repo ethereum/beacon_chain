@@ -375,19 +375,19 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
         if block:
             block_hash = block.hash
             total_participated_deposits = block_vote_cache[block_hash]['total_voter_deposits']
-            voter_indices = block_vote_cache[block_hash]['total_voter_deposits']
+            voter_indices = block_vote_cache[block_hash]['voter_indices']
         else:
             total_participated_deposits = 0
             voter_indices = set()
 
-        participating_validator_indices = filter(
+        participating_validator_indices = list(filter(
             lambda index: index in voter_indices,
             active_validator_indices
-        )
-        non_participating_validator_indices = filter(
+        ))
+        non_participating_validator_indices = list(filter(
             lambda index: index not in voter_indices,
             active_validator_indices
-        )
+        ))
         # finalized recently?
         if time_since_finality <= 2 * config['cycle_length']:
             for index in participating_validator_indices:
