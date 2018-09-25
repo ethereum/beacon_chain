@@ -60,10 +60,11 @@ if TYPE_CHECKING:
     from .validator_record import ValidatorRecord  # noqa: F401
 
 
-def validate_block_pre_processing_conditions(block: 'Block',
-                   parent_block: 'Block',
-                   crystallized_state: CrystallizedState,
-                   config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
+def validate_block_pre_processing_conditions(
+        block: 'Block',
+        parent_block: 'Block',
+        crystallized_state: CrystallizedState,
+        config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
     # 1. ensure parent processed
     # 2. an attestation from the proposer of the block is included along with the block in the
     # network message object
