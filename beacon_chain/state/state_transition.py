@@ -404,7 +404,7 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
                 )
         else:
             for index in non_participating_validator_indices:
-                rewards_and_penalties[index] = (
+                rewards_and_penalties[index] -= (
                     validators[index].balance //
                     reward_quotient +
                     validators[index].balance *
