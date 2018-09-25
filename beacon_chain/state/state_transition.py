@@ -327,7 +327,8 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         recent_block_hashes=active_state.recent_block_hashes[:],
         # Should probably clean up block_vote_cache but old records won't break cache
         # so okay for now
-        block_vote_cache=deepcopy(active_state.block_vote_cache)
+        block_vote_cache=deepcopy(active_state.block_vote_cache),
+        chain=deepcopy(active_state.chain),
     )
 
     return new_crystallized_state, new_active_state
@@ -344,7 +345,8 @@ def fill_recent_block_hashes(active_state: ActiveState,
             block.slot_number,
             block.parent_hash
         ),
-        block_vote_cache=deepcopy(active_state.block_vote_cache)
+        block_vote_cache=deepcopy(active_state.block_vote_cache),
+        chain=deepcopy(active_state.chain),
     )
 
 
