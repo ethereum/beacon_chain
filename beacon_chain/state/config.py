@@ -14,6 +14,9 @@ SHARD_COUNT = 1024  # shards
 SLOT_DURATION = 8  # seconds
 SQRT_E_DROP_TIME = 2**20  # seconds
 
+# Make sure quadratic_penalty_quotient is integer computation
+assert SQRT_E_DROP_TIME % SLOT_DURATION == 0
+
 
 def generate_config(*,
                     base_reward_quotient=BASE_REWARD_QUOTIENT,

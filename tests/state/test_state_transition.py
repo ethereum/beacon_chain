@@ -120,7 +120,7 @@ def test_compute_cycle_transitions(genesis_crystallized_state,
     parent_active_state = genesis_active_state
     parent_block = genesis_block
     block = copy.deepcopy(genesis_block)
-    block.slot_number = config['cycle_length']
+    block.slot_number = config['cycle_length'] * 3
 
     active_state = fill_recent_block_hashes(
         parent_active_state, parent_block, block

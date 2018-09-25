@@ -369,12 +369,15 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
 
     total_deposits_in_ETH = total_deposits // WEI_PER_ETH
     reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
-    quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))
+    quadratic_penalty_quotient = (config['sqrt_e_drop_time'] / config['slot_duration']) ** 2
+    # Normally quadratic_penalty_quotient should be integer
+    assert quadratic_penalty_quotient.is_integer()
+    quadratic_penalty_quotient = int(quadratic_penalty_quotient)
 
     last_state_recalc = crystallized_state.last_state_recalc
     block_vote_cache = active_state.block_vote_cache
 
-    for slot in range(last_state_recalc - config['cycle_length'], last_state_recalc):
+    for slot in range(max(last_state_recalc - config['cycle_length'], 0), last_state_recalc):
         block = active_state.chain.get_block_by_slot_number(slot)
         if block:
             block_hash = block.hash
@@ -393,7 +396,7 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
             active_validator_indices
         ))
         # finalized recently?
-        if time_since_finality <= 2 * config['cycle_length']:
+        if time_since_finality <= 3 * config['cycle_length']:
             for index in participating_validator_indices:
                 rewards_and_penalties[index] += (
                     validators[index].balance //
