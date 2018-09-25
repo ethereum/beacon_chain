@@ -362,7 +362,11 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
     rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
     time_since_finality = block.slot_number - crystallized_state.last_finalized_slot
+
     total_deposits = crystallized_state.total_deposits
+    # total_deposits should be positive
+    assert total_deposits > 0
+
     total_deposits_in_ETH = total_deposits // WEI_PER_ETH
     reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
     quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))
@@ -405,11 +409,8 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
         else:
             for index in non_participating_validator_indices:
                 rewards_and_penalties[index] -= (
-                    validators[index].balance //
-                    reward_quotient +
-                    validators[index].balance *
-                    time_since_finality //
-                    quadratic_penalty_quotient
+                    (validators[index].balance // reward_quotient) +
+                    (validators[index].balance * time_since_finality // quadratic_penalty_quotient)
                 )
 
     return rewards_and_penalties
@@ -462,6 +463,9 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
             ffg_rewards[index] +
             crosslink_rewards[index]
         )
+        # TODO: Keep the balance nonnegative now until we have clear rule of forced exit.
+        if updated_validators[index].balance < 0:
+            updated_validators[index].balance = 0
 
     return updated_validators
 
