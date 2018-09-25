@@ -230,6 +230,7 @@ def get_proposer_position(parent_block: 'Block',
 
     # `proposer_index_in_committee` th attester in `shard_and_committee`
     # is the proposer of the parent block.
+    assert len(shard_and_committee.committee) > 0
     proposer_index_in_committee = (
         parent_block.slot_number %
         len(shard_and_committee.committee)
