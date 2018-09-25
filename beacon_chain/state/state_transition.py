@@ -107,15 +107,23 @@ def validate_attestation(crystallized_state: CrystallizedState,
                          active_state: ActiveState,
                          attestation: 'AttestationRecord',
                          block: 'Block',
+                         parent_block: 'Block',
                          config: Dict[str, Any]=DEFAULT_CONFIG) -> None:
-    if not attestation.slot < block.slot_number:
-        raise Exception("Attestation slot number too high")
-
-    if not (attestation.slot > block.slot_number - config['cycle_length']):
+    # Verify attestation.slot_number
+    if not attestation.slot <= parent_block.slot_number:
+        raise Exception(
+            "Attestation slot number too high:\n"
+            "\tFound: %s Needed less than or equal to %s" %
+            (attestation.slot, parent_block.slot_number)
+        )
+    if not (attestation.slot >= max(parent_block.slot_number - config['cycle_length'] + 1, 0)):
         raise Exception(
             "Attestation slot number too low:\n"
-            "\tFound: %s, Needed greater than: %s" %
-            (attestation.slot, block.slot_number - config['cycle_length'])
+            "\tFound: %s, Needed greater than or equalt to: %s" %
+            (
+                attestation.slot,
+                max(parent_block.slot_number - config['cycle_length'] + 1, 0)
+            )
         )
 
     # TODO: Verify that the justified_slot and justified_block_hash given are in
@@ -211,6 +219,7 @@ def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
 def process_block(crystallized_state: CrystallizedState,
                   active_state: ActiveState,
                   block: 'Block',
+                  parent_block: 'Block',
                   config: dict = DEFAULT_CONFIG) -> ActiveState:
     new_block_vote_cache = deepcopy(active_state.block_vote_cache)
     for attestation in block.attestations:
@@ -218,6 +227,7 @@ def process_block(crystallized_state: CrystallizedState,
                              active_state,
                              attestation,
                              block,
+                             parent_block,
                              config)
         new_block_vote_cache = get_updated_block_vote_cache(
             crystallized_state,
@@ -588,6 +598,7 @@ def compute_state_transition(
         crystallized_state,
         active_state,
         block,
+        parent_block,
         config
     )
 
