@@ -99,16 +99,16 @@ def test_pos_finalization(monkeypatch,
                           config):
     from beacon_chain.state import state_transition
 
-    def mock_validate_block(block,
+    def mock_validate_parent_block_proposer(block,
                             parent_block,
                             crystallized_state,
                             config):
-        return True
+        return None
 
     monkeypatch.setattr(
         state_transition,
-        'validate_block',
-        mock_validate_block
+        'validate_parent_block_proposer',
+        mock_validate_parent_block_proposer
     )
 
     c = genesis_crystallized_state

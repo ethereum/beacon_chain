@@ -60,23 +60,15 @@ if TYPE_CHECKING:
     from .validator_record import ValidatorRecord  # noqa: F401
 
 
-def validate_block(block: 'Block',
+def validate_block_pre_processing_conditions(block: 'Block',
                    parent_block: 'Block',
                    crystallized_state: CrystallizedState,
                    config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
-    # ensure parent processed
-
-    # an attestation from the proposer of the block is included along with the block in the
+    # 1. ensure parent processed
+    # 2. an attestation from the proposer of the block is included along with the block in the
     # network message object
-    validate_parent_block_proposer(
-        block,
-        parent_block,
-        crystallized_state,
-        config=config,
-    )
-
-    # ensure pow_chain_ref processed
-    # ensure local time is large enough to process this block's slot
+    # 3. ensure pow_chain_ref processed
+    # 4. ensure local time is large enough to process this block's slot
 
     return True
 
@@ -222,6 +214,9 @@ def process_block(crystallized_state: CrystallizedState,
                   parent_block: 'Block',
                   config: dict = DEFAULT_CONFIG) -> ActiveState:
     new_block_vote_cache = deepcopy(active_state.block_vote_cache)
+
+    validate_parent_block_proposer(block, parent_block, crystallized_state, config=config)
+
     for attestation in block.attestations:
         validate_attestation(crystallized_state,
                              active_state,
@@ -588,7 +583,12 @@ def compute_state_transition(
         config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     crystallized_state, active_state = parent_state
 
-    validate_block(block, parent_block, crystallized_state, config=config)
+    validate_block_pre_processing_conditions(
+        block,
+        parent_block,
+        crystallized_state,
+        config=config,
+    )
 
     # Update active state to fill any missing hashes with parent block hash
     active_state = fill_recent_block_hashes(active_state, parent_block, block)
