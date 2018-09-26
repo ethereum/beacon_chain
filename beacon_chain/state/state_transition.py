@@ -87,12 +87,29 @@ def validate_parent_block_proposer(block: 'Block',
         config=config,
     )
 
-    assert len(block.attestations) > 0
-    attestation = block.attestations[0]
-    if not has_voted(attestation.attester_bitfield, proposer_index_in_committee):
+    if len(block.attestations) == 0:
         raise Exception(
-            "Proposer of parent block should be one of the attesters in block.attestions[0]:"
-            "proposer index in committee: %d" % proposer_index_in_committee
+            "block.attestations should not be an empty list"
+        )
+    attestation = block.attestations[0]
+
+    is_proposer_attestation = (
+        attestation.shard_id == shard_id and
+        attestation.slot == parent_block.slot_number and
+        has_voted(attestation.attester_bitfield, proposer_index_in_committee)
+    )
+    if not is_proposer_attestation:
+        raise Exception(
+            "Proposer of parent block should be one of the attesters in block.attestions[0]:\n"
+            "\tExpected: proposer index in committee: %d, shard_id: %d, slot: %d\n"
+            "\tFound: shard_id: %d, slot: %d, voted: %s" % (
+                proposer_index_in_committee,
+                shard_id,
+                parent_block.slot_number,
+                attestation.shard_id,
+                attestation.slot,
+                has_voted(attestation.attester_bitfield, proposer_index_in_committee),
+            )
         )
 
 
