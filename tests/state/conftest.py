@@ -24,9 +24,6 @@ from beacon_chain.state.attestation_record import (
 from beacon_chain.state.block import (
     Block,
 )
-from beacon_chain.state.constants import (
-    ZERO_HASH32,
-)
 from beacon_chain.state.validator_record import (
     ValidatorRecord,
 )
