@@ -2,6 +2,7 @@ from typing import (
     Any,
     Dict,
     List,
+    Tuple,
     TYPE_CHECKING,
 )
 
@@ -96,10 +97,10 @@ def get_attestation_indices(crystallized_state: 'CrystallizedState',
                             config: Dict[str, Any]=DEFAULT_CONFIG) -> List[int]:
     shard_id = attestation.shard_id
 
-    filtered_shard_and_committees_for_slot = list(
+    filtered_shards_and_committees_for_slot = list(
         filter(
             lambda x: x.shard_id == shard_id,
-            get_shard_and_committees_for_slot(
+            get_shards_and_committees_for_slot(
                 crystallized_state,
                 attestation.slot,
                 config=config,
@@ -108,8 +109,8 @@ def get_attestation_indices(crystallized_state: 'CrystallizedState',
     )
 
     attestation_indices = []  # type: List[int]
-    if filtered_shard_and_committees_for_slot:
-        attestation_indices = filtered_shard_and_committees_for_slot[0].committee
+    if filtered_shards_and_committees_for_slot:
+        attestation_indices = filtered_shards_and_committees_for_slot[0].committee
 
     return attestation_indices
 
@@ -195,7 +196,7 @@ def get_new_shuffling(seed: Hash32,
     return o
 
 
-def get_shard_and_committees_for_slot(
+def get_shards_and_committees_for_slot(
         crystallized_state: 'CrystallizedState',
         slot: int,
         config: Dict[str, Any]=DEFAULT_CONFIG) -> List[ShardAndCommittee]:
@@ -216,3 +217,23 @@ def get_block_hash(
     sback = current_block.slot_number - cycle_length * 2
     assert sback <= slot < sback + cycle_length * 2
     return active_state.recent_block_hashes[slot - sback]
+
+
+def get_proposer_position(parent_block: 'Block',
+                          crystallized_state: 'CrystallizedState',
+                          config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[int, int]:
+    shard_and_committee = get_shards_and_committees_for_slot(
+        crystallized_state,
+        parent_block.slot_number,
+        config=config,
+    )[0]
+
+    # `proposer_index_in_committee` th attester in `shard_and_committee`
+    # is the proposer of the parent block.
+    assert len(shard_and_committee.committee) > 0
+    proposer_index_in_committee = (
+        parent_block.slot_number %
+        len(shard_and_committee.committee)
+    )
+
+    return proposer_index_in_committee, shard_and_committee.shard_id

@@ -50,6 +50,7 @@ from .helpers import (
     get_attestation_indices,
     get_new_recent_block_hashes,
     get_new_shuffling,
+    get_proposer_position,
     get_signed_parent_hashes,
 )
 
@@ -59,28 +60,80 @@ if TYPE_CHECKING:
     from .validator_record import ValidatorRecord  # noqa: F401
 
 
-def validate_block(block: 'Block') -> bool:
-    # ensure parent processed
-    # attestation from proposer of block was included with the block in the network message
-    # ensure pow_chain_ref processed
-    # ensure local time is large enough to process this block's slot
+def validate_block_pre_processing_conditions(
+        block: 'Block',
+        parent_block: 'Block',
+        crystallized_state: CrystallizedState,
+        config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
+    # 1. ensure parent processed
+    # 2. an attestation from the proposer of the block is included along with the block in the
+    # network message object
+    # 3. ensure pow_chain_ref processed
+    # 4. ensure local time is large enough to process this block's slot
 
     return True
+
+
+def validate_parent_block_proposer(block: 'Block',
+                                   parent_block: 'Block',
+                                   crystallized_state: CrystallizedState,
+                                   config: Dict[str, Any]=DEFAULT_CONFIG) -> None:
+    if block.slot_number == 0:
+        return
+
+    proposer_index_in_committee, shard_id = get_proposer_position(
+        parent_block,
+        crystallized_state,
+        config=config,
+    )
+
+    if len(block.attestations) == 0:
+        raise Exception(
+            "block.attestations should not be an empty list"
+        )
+    attestation = block.attestations[0]
+
+    is_proposer_attestation = (
+        attestation.shard_id == shard_id and
+        attestation.slot == parent_block.slot_number and
+        has_voted(attestation.attester_bitfield, proposer_index_in_committee)
+    )
+    if not is_proposer_attestation:
+        raise Exception(
+            "Proposer of parent block should be one of the attesters in block.attestions[0]:\n"
+            "\tExpected: proposer index in committee: %d, shard_id: %d, slot: %d\n"
+            "\tFound: shard_id: %d, slot: %d, voted: %s" % (
+                proposer_index_in_committee,
+                shard_id,
+                parent_block.slot_number,
+                attestation.shard_id,
+                attestation.slot,
+                has_voted(attestation.attester_bitfield, proposer_index_in_committee),
+            )
+        )
 
 
 def validate_attestation(crystallized_state: CrystallizedState,
                          active_state: ActiveState,
                          attestation: 'AttestationRecord',
                          block: 'Block',
+                         parent_block: 'Block',
                          config: Dict[str, Any]=DEFAULT_CONFIG) -> None:
-    if not attestation.slot < block.slot_number:
-        raise Exception("Attestation slot number too high")
-
-    if not (attestation.slot > block.slot_number - config['cycle_length']):
+    # Verify attestation.slot_number
+    if not attestation.slot <= parent_block.slot_number:
+        raise Exception(
+            "Attestation slot number too high:\n"
+            "\tFound: %s Needed less than or equal to %s" %
+            (attestation.slot, parent_block.slot_number)
+        )
+    if not (attestation.slot >= max(parent_block.slot_number - config['cycle_length'] + 1, 0)):
         raise Exception(
             "Attestation slot number too low:\n"
-            "\tFound: %s, Needed greater than: %s" %
-            (attestation.slot, block.slot_number - config['cycle_length'])
+            "\tFound: %s, Needed greater than or equalt to: %s" %
+            (
+                attestation.slot,
+                max(parent_block.slot_number - config['cycle_length'] + 1, 0)
+            )
         )
 
     # TODO: Verify that the justified_slot and justified_block_hash given are in
@@ -176,13 +229,18 @@ def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
 def process_block(crystallized_state: CrystallizedState,
                   active_state: ActiveState,
                   block: 'Block',
+                  parent_block: 'Block',
                   config: dict = DEFAULT_CONFIG) -> ActiveState:
     new_block_vote_cache = deepcopy(active_state.block_vote_cache)
+
+    validate_parent_block_proposer(block, parent_block, crystallized_state, config=config)
+
     for attestation in block.attestations:
         validate_attestation(crystallized_state,
                              active_state,
                              attestation,
                              block,
+                             parent_block,
                              config)
         new_block_vote_cache = get_updated_block_vote_cache(
             crystallized_state,
@@ -543,7 +601,12 @@ def compute_state_transition(
         config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[CrystallizedState, ActiveState]:
     crystallized_state, active_state = parent_state
 
-    assert validate_block(block)
+    validate_block_pre_processing_conditions(
+        block,
+        parent_block,
+        crystallized_state,
+        config=config,
+    )
 
     # Update active state to fill any missing hashes with parent block hash
     active_state = fill_recent_block_hashes(active_state, parent_block, block)
@@ -553,6 +616,7 @@ def compute_state_transition(
         crystallized_state,
         active_state,
         block,
+        parent_block,
         config
     )
 

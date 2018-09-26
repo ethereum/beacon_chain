@@ -90,12 +90,24 @@ def test_state_transition_integration(genesis_crystallized_state,
         (1000, 1000, 20, 10, 80, 10),
     ],
 )
-def test_pos_finalization(genesis_crystallized_state,
+def test_pos_finalization(monkeypatch,
+                          genesis_crystallized_state,
                           genesis_active_state,
                           genesis_block,
                           mock_make_child,
                           mock_make_attestations,
                           config):
+    from beacon_chain.state import state_transition
+
+    def mock_validate_parent_block_proposer(block, parent_block, crystallized_state, config):
+        return None
+
+    monkeypatch.setattr(
+        state_transition,
+        'validate_parent_block_proposer',
+        mock_validate_parent_block_proposer
+    )
+
     c = genesis_crystallized_state
     a = genesis_active_state
     block = genesis_block

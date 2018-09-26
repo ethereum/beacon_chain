@@ -1,10 +1,12 @@
 import pytest
 
 from beacon_chain.state.active_state import ActiveState
+from beacon_chain.state.shard_and_committee import ShardAndCommittee
 from beacon_chain.state.helpers import (
     get_new_shuffling,
-    get_shard_and_committees_for_slot,
+    get_shards_and_committees_for_slot,
     get_block_hash,
+    get_proposer_position,
 )
 
 from tests.state.helpers import (
@@ -85,7 +87,7 @@ def test_get_new_shuffling_handles_shard_wrap(genesis_validators, config):
         (100, 64, False),
     ],
 )
-def test_get_shard_and_committees_for_slot(
+def test_get_shards_and_committees_for_slot(
         genesis_crystallized_state,
         num_validators,
         slot,
@@ -94,15 +96,15 @@ def test_get_shard_and_committees_for_slot(
     crystallized_state = genesis_crystallized_state
 
     if success:
-        shard_and_committees_for_slot = get_shard_and_committees_for_slot(
+        shards_and_committees_for_slot = get_shards_and_committees_for_slot(
             crystallized_state,
             slot,
             config=config,
         )
-        assert len(shard_and_committees_for_slot) > 0
+        assert len(shards_and_committees_for_slot) > 0
     else:
         with pytest.raises(AssertionError):
-            get_shard_and_committees_for_slot(
+            get_shards_and_committees_for_slot(
                 crystallized_state,
                 slot,
                 config=config,
@@ -157,3 +159,47 @@ def test_get_block_hash(
                 slot,
                 config=config,
             )
+
+
+@pytest.mark.parametrize(
+    (
+        'committee,parent_block_number,result_proposer_index_in_committee'
+    ),
+    [
+        ([0, 1, 2, 3], 0, 0),
+        ([0, 1, 2, 3], 2, 2),
+        ([0, 1, 2, 3], 11, 3),
+    ],
+)
+def test_get_proposer_position(monkeypatch,
+                               genesis_block,
+                               genesis_crystallized_state,
+                               committee,
+                               parent_block_number,
+                               result_proposer_index_in_committee,
+                               config):
+    from beacon_chain.state import helpers
+
+    def mock_get_shards_and_committees_for_slot(parent_block,
+                                                crystallized_state,
+                                                config):
+        return [
+            ShardAndCommittee(shard_id=1, committee=committee),
+        ]
+
+    monkeypatch.setattr(
+        helpers,
+        'get_shards_and_committees_for_slot',
+        mock_get_shards_and_committees_for_slot
+    )
+
+    parent_block = genesis_block
+    parent_block.slot_number = parent_block_number
+
+    proposer_index_in_committee, shard_id = get_proposer_position(
+        parent_block,
+        genesis_crystallized_state,
+        config=config,
+    )
+
+    assert proposer_index_in_committee == result_proposer_index_in_committee
