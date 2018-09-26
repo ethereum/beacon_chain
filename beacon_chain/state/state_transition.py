@@ -458,6 +458,7 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
     total_deposits_in_ETH = total_deposits // WEI_PER_ETH
     reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
     quadratic_penalty_quotient = (config['sqrt_e_drop_time'] / config['slot_duration']) ** 2
+
     # Normally quadratic_penalty_quotient should be integer
     assert quadratic_penalty_quotient.is_integer()
     quadratic_penalty_quotient = int(quadratic_penalty_quotient)
