@@ -317,6 +317,9 @@ def mock_make_attestations(keymap, config):
             print("Generating attestation for shard %s" % shard_id)
             print("Committee size %s" % len(committee_indices))
 
+            justified_slot = crystallized_state.last_justified_slot
+            justified_block_hash = active_state.chain.get_block_by_slot_number(justified_slot).hash
+
             # Create attestation
             attestation = AttestationRecord(
                 slot=block.slot_number,
@@ -324,9 +327,8 @@ def mock_make_attestations(keymap, config):
                 oblique_parent_hashes=[],
                 shard_block_hash=blake(bytes(str(shard_id), 'utf-8')),
                 attester_bitfield=get_empty_bitfield(len(committee_indices)),
-                justified_slot=crystallized_state.last_justified_slot,
-                # TODO: it's a stub for now and will be changed to the correct block hash
-                justified_block_hash=ZERO_HASH32,
+                justified_slot=justified_slot,
+                justified_block_hash=justified_block_hash,
             )
 
             # Randomly pick indices to include

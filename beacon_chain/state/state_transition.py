@@ -136,9 +136,28 @@ def validate_attestation(crystallized_state: CrystallizedState,
             )
         )
 
-    # TODO: Verify that the justified_slot and justified_block_hash given are in
-    # the chain and are equal to or earlier than the last_justified_slot
-    # in the crystallized state.
+    #
+    # validate justified_slot and justified_block_hash
+    #
+    if attestation.justified_slot > crystallized_state.last_justified_slot:
+        raise Exception(
+            "attestation.justified_slot %s should be equal to or earlier than"
+            " crystallized_state.last_justified_slot %s" % (
+                attestation.justified_slot,
+                crystallized_state.last_justified_slot,
+            )
+        )
+
+    justified_block = active_state.chain.get_block_by_hash(attestation.justified_block_hash)
+    if justified_block is None:
+        raise Exception(
+            "justified_block_hash %s is not in the canonical chain" %
+            attestation.justified_block_hash
+        )
+    if justified_block.slot_number != attestation.justified_slot:
+        raise Exception(
+            "justified_slot %s doesn't match justified_block_hash" % attestation.justified_slot
+        )
 
     parent_hashes = get_signed_parent_hashes(
         active_state,
