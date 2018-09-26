@@ -385,7 +385,8 @@ def initialize_new_cycle(crystallized_state: CrystallizedState,
         recent_block_hashes=active_state.recent_block_hashes[:],
         # Should probably clean up block_vote_cache but old records won't break cache
         # so okay for now
-        block_vote_cache=deepcopy(active_state.block_vote_cache)
+        block_vote_cache=deepcopy(active_state.block_vote_cache),
+        chain=deepcopy(active_state.chain),
     )
 
     return new_crystallized_state, new_active_state
@@ -402,7 +403,8 @@ def fill_recent_block_hashes(active_state: ActiveState,
             block.slot_number,
             block.parent_hash
         ),
-        block_vote_cache=deepcopy(active_state.block_vote_cache)
+        block_vote_cache=deepcopy(active_state.block_vote_cache),
+        chain=deepcopy(active_state.chain),
     )
 
 
@@ -418,34 +420,41 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
     rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
     time_since_finality = block.slot_number - crystallized_state.last_finalized_slot
+
     total_deposits = crystallized_state.total_deposits
+    # total_deposits should be positive
+    assert total_deposits > 0
+
     total_deposits_in_ETH = total_deposits // WEI_PER_ETH
     reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
-    quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))
+    quadratic_penalty_quotient = (config['sqrt_e_drop_time'] / config['slot_duration']) ** 2
+    # Normally quadratic_penalty_quotient should be integer
+    assert quadratic_penalty_quotient.is_integer()
+    quadratic_penalty_quotient = int(quadratic_penalty_quotient)
 
     last_state_recalc = crystallized_state.last_state_recalc
     block_vote_cache = active_state.block_vote_cache
 
-    for slot in range(last_state_recalc - config['cycle_length'], last_state_recalc):
+    for slot in range(max(last_state_recalc - config['cycle_length'], 0), last_state_recalc):
         block = active_state.chain.get_block_by_slot_number(slot)
         if block:
             block_hash = block.hash
             total_participated_deposits = block_vote_cache[block_hash]['total_voter_deposits']
-            voter_indices = block_vote_cache[block_hash]['total_voter_deposits']
+            voter_indices = block_vote_cache[block_hash]['voter_indices']
         else:
             total_participated_deposits = 0
             voter_indices = set()
 
-        participating_validator_indices = filter(
+        participating_validator_indices = list(filter(
             lambda index: index in voter_indices,
             active_validator_indices
-        )
-        non_participating_validator_indices = filter(
+        ))
+        non_participating_validator_indices = list(filter(
             lambda index: index not in voter_indices,
             active_validator_indices
-        )
+        ))
         # finalized recently?
-        if time_since_finality <= 2 * config['cycle_length']:
+        if time_since_finality <= 3 * config['cycle_length']:
             for index in participating_validator_indices:
                 rewards_and_penalties[index] += (
                     validators[index].balance //
@@ -460,12 +469,9 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
                 )
         else:
             for index in non_participating_validator_indices:
-                rewards_and_penalties[index] = (
-                    validators[index].balance //
-                    reward_quotient +
-                    validators[index].balance *
-                    time_since_finality //
-                    quadratic_penalty_quotient
+                rewards_and_penalties[index] -= (
+                    (validators[index].balance // reward_quotient) +
+                    (validators[index].balance * time_since_finality // quadratic_penalty_quotient)
                 )
 
     return rewards_and_penalties
@@ -518,6 +524,9 @@ def apply_rewards_and_penalties(crystallized_state: CrystallizedState,
             ffg_rewards[index] +
             crosslink_rewards[index]
         )
+        # TODO: Keep the balance nonnegative now until we have clear rule of forced exit.
+        if updated_validators[index].balance < 0:
+            updated_validators[index].balance = 0
 
     return updated_validators
 
