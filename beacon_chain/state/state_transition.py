@@ -525,8 +525,12 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
     # collect crosslink participation data for each shard_id that was attempted to
     # be crosslinked two cycles ago
     committee_crosslinks = {}  # type: Dict[str, Any]
-    for slot in range(last_state_recalc - config['cycle_length'], last_state_recalc):
-        shards_and_committees = get_shards_and_committees_for_slot(crystallized_state, slot, config)
+    for slot in range(max(last_state_recalc - config['cycle_length'], 0), last_state_recalc):
+        shards_and_committees = get_shards_and_committees_for_slot(
+            crystallized_state,
+            slot,
+            config=config
+        )
         for shard_and_committee in shards_and_committees:
             shard_id = shard_and_committee.shard_id
             if shard_id not in committee_crosslinks:
