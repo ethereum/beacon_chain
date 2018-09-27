@@ -122,7 +122,7 @@ def validate_attestation(crystallized_state: CrystallizedState,
                          attestation: 'AttestationRecord',
                          block: 'Block',
                          parent_block: 'Block',
-                         config: Dict[str, Any]=DEFAULT_CONFIG) -> None:
+                         config: Dict[str, Any]=DEFAULT_CONFIG) -> bool:
     #
     # validate slot number
     #
