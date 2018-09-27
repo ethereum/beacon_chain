@@ -65,7 +65,10 @@ def bls_sign_mock(m, k):
 
 
 @pytest.fixture(autouse=True)
-def mock_bls(mocker):
+def mock_bls(mocker, request):
+    if 'noautofixt' in request.keywords:
+        return
+
     mocker.patch('beacon_chain.utils.bls.verify', side_effect=bls_verify_mock)
     mocker.patch('beacon_chain.utils.bls.sign', side_effect=bls_sign_mock)
 

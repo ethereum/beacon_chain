@@ -8,6 +8,10 @@ from typing import (
     TYPE_CHECKING,
 )
 
+from eth_utils import (
+    ValidationError,
+)
+
 from ssz import (
     deepcopy,
 )
@@ -88,7 +92,7 @@ def validate_parent_block_proposer(block: 'Block',
     )
 
     if len(block.attestations) == 0:
-        raise Exception(
+        raise ValidationError(
             "block.attestations should not be an empty list"
         )
     attestation = block.attestations[0]
@@ -99,7 +103,7 @@ def validate_parent_block_proposer(block: 'Block',
         has_voted(attestation.attester_bitfield, proposer_index_in_committee)
     )
     if not is_proposer_attestation:
-        raise Exception(
+        raise ValidationError(
             "Proposer of parent block should be one of the attesters in block.attestions[0]:\n"
             "\tExpected: proposer index in committee: %d, shard_id: %d, slot: %d\n"
             "\tFound: shard_id: %d, slot: %d, voted: %s" % (
@@ -119,15 +123,17 @@ def validate_attestation(crystallized_state: CrystallizedState,
                          block: 'Block',
                          parent_block: 'Block',
                          config: Dict[str, Any]=DEFAULT_CONFIG) -> None:
-    # Verify attestation.slot_number
+    #
+    # validate slot number
+    #
     if not attestation.slot <= parent_block.slot_number:
-        raise Exception(
+        raise ValidationError(
             "Attestation slot number too high:\n"
             "\tFound: %s Needed less than or equal to %s" %
             (attestation.slot, parent_block.slot_number)
         )
     if not (attestation.slot >= max(parent_block.slot_number - config['cycle_length'] + 1, 0)):
-        raise Exception(
+        raise ValidationError(
             "Attestation slot number too low:\n"
             "\tFound: %s, Needed greater than or equalt to: %s" %
             (
@@ -140,7 +146,7 @@ def validate_attestation(crystallized_state: CrystallizedState,
     # validate justified_slot and justified_block_hash
     #
     if attestation.justified_slot > crystallized_state.last_justified_slot:
-        raise Exception(
+        raise ValidationError(
             "attestation.justified_slot %s should be equal to or earlier than"
             " crystallized_state.last_justified_slot %s" % (
                 attestation.justified_slot,
@@ -150,12 +156,12 @@ def validate_attestation(crystallized_state: CrystallizedState,
 
     justified_block = active_state.chain.get_block_by_hash(attestation.justified_block_hash)
     if justified_block is None:
-        raise Exception(
+        raise ValidationError(
             "justified_block_hash %s is not in the canonical chain" %
             attestation.justified_block_hash
         )
     if justified_block.slot_number != attestation.justified_slot:
-        raise Exception(
+        raise ValidationError(
             "justified_slot %s doesn't match justified_block_hash" % attestation.justified_slot
         )
 
@@ -175,7 +181,7 @@ def validate_attestation(crystallized_state: CrystallizedState,
     # validate bitfield
     #
     if not (len(attestation.attester_bitfield) == get_bitfield_length(len(attestation_indices))):
-        raise Exception(
+        raise ValidationError(
             "Attestation has incorrect bitfield length. Found: %s, Expected: %s" %
             (len(attestation.attester_bitfield), get_bitfield_length(len(attestation_indices)))
         )
@@ -185,7 +191,7 @@ def validate_attestation(crystallized_state: CrystallizedState,
     if last_bit % 8 != 0:
         for i in range(8 - last_bit % 8):
             if has_voted(attestation.attester_bitfield, last_bit + i):
-                raise Exception("Attestation has non-zero trailing bits")
+                raise ValidationError("Attestation has non-zero trailing bits")
 
     #
     # validate aggregate_sig
@@ -203,7 +209,9 @@ def validate_attestation(crystallized_state: CrystallizedState,
         attestation.justified_slot.to_bytes(8, 'big')
     )
     if not bls.verify(message, bls.aggregate_pubs(pub_keys), attestation.aggregate_sig):
-        raise Exception("Attestation aggregate signature fails")
+        raise ValidationError("Attestation aggregate signature fails")
+
+    return True
 
 
 def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
