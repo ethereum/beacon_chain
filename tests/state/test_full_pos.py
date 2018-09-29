@@ -5,6 +5,9 @@ from ssz import (
     serialize,
 )
 
+from beacon_chain.state.chain import (
+    Chain,
+)
 from beacon_chain.state.state_transition import (
     compute_state_transition,
 )
@@ -29,6 +32,7 @@ def test_state_transition_integration(genesis_crystallized_state,
     c = genesis_crystallized_state
     a = genesis_active_state
     block = genesis_block
+    a.chain = Chain(head=block, blocks=[block])
     print('Generated genesis state')
     print('Crystallized state length:', len(serialize(genesis_crystallized_state)))
     print('Active state length:', len(serialize(genesis_active_state)))
@@ -111,6 +115,7 @@ def test_pos_finalization(monkeypatch,
     c = genesis_crystallized_state
     a = genesis_active_state
     block = genesis_block
+    a.chain = Chain(head=block, blocks=[block])
     expected_streak = 0
     assert c.justified_streak == expected_streak
 

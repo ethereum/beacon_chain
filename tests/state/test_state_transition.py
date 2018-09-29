@@ -2,43 +2,268 @@ import copy
 
 import pytest
 
+from eth_utils import (
+    ValidationError,
+)
+
 from ssz import (
     serialize,
 )
 
 from beacon_chain.utils.blake import blake
+from beacon_chain.utils.bitfield import (
+    get_empty_bitfield,
+    set_voted,
+)
 
+from beacon_chain.state.chain import (
+    Chain,
+)
+from beacon_chain.state.helpers import (
+    get_attestation_indices,
+)
 from beacon_chain.state.state_transition import (
     fill_recent_block_hashes,
     compute_cycle_transitions,
     initialize_new_cycle,
+    validate_attestation,
 )
+
+
+@pytest.fixture
+def attestation_validation_fixture(
+        genesis_crystallized_state,
+        genesis_active_state,
+        genesis_block,
+        mock_make_child,
+        mock_make_attestations,
+        config):
+    crystallized_state = genesis_crystallized_state
+    active_state = genesis_active_state
+    parent_block = genesis_block
+    active_state.chain = Chain(head=parent_block, blocks=[parent_block])
+    attestations_of_genesis = mock_make_attestations(
+        (crystallized_state, active_state),
+        parent_block,
+        attester_share=1.0
+    )
+    block, _, _ = mock_make_child(
+        (crystallized_state, active_state),
+        parent_block,
+        1,
+        attestations_of_genesis,
+    )
+    attestation = attestations_of_genesis[0]
+
+    return (
+        crystallized_state,
+        active_state,
+        attestation,
+        block,
+        parent_block,
+    )
 
 
 @pytest.mark.parametrize(
-    'attestation_slot,block_slot_number,is_valid',
+    (
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,shard_count'
+    ),
     [
-        (5, 4, False),
-        (6, 6, False),
-        (6, 7, True),
-        (1, 10, True),
-    ]
+        (100, 1000, 50, 10, 10),
+    ],
 )
-def test_validate_attestation_slot(attestation_slot,
-                                   block_slot_number,
-                                   is_valid,
-                                   sample_attestation_record_params,
-                                   sample_block_params,
-                                   sample_crystallized_state_params):
-    pass
+def test_validate_attestation_valid(attestation_validation_fixture, config):
+    (
+        crystallized_state,
+        active_state,
+        attestation,
+        block,
+        parent_block
+    ) = attestation_validation_fixture
+
+    assert validate_attestation(
+        crystallized_state,
+        active_state,
+        attestation,
+        block,
+        parent_block,
+        config,
+    )
 
 
-def test_validate_attestation_bitfield():
-    pass
+@pytest.mark.parametrize(
+    (
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,shard_count,'
+        'attestation_slot'
+    ),
+    [
+        (100, 1000, 50, 10, 10, 1),
+        (100, 1000, 50, 10, 10, -1),
+    ],
+)
+def test_validate_attestation_slot(attestation_validation_fixture, attestation_slot, config):
+    (
+        crystallized_state,
+        active_state,
+        attestation,
+        block,
+        parent_block
+    ) = attestation_validation_fixture
+
+    attestation.slot = attestation_slot
+    with pytest.raises(ValidationError):
+        validate_attestation(
+            crystallized_state,
+            active_state,
+            attestation,
+            block,
+            parent_block,
+            config,
+        )
 
 
-def test_validate_attestation_aggregate_sig():
-    pass
+@pytest.mark.parametrize(
+    (
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,shard_count,'
+    ),
+    [
+        (100, 1000, 50, 10, 10),
+    ],
+)
+def test_validate_attestation_justified(attestation_validation_fixture, config):
+    (
+        crystallized_state,
+        active_state,
+        original_attestation,
+        block,
+        parent_block
+    ) = attestation_validation_fixture
+
+    # Case 1: attestation.justified_slot > crystallized_state.last_justified_slot
+    attestation = copy.deepcopy(original_attestation)
+    attestation.justified_slot = crystallized_state.last_justified_slot + 1
+    with pytest.raises(ValidationError):
+        validate_attestation(
+            crystallized_state,
+            active_state,
+            attestation,
+            block,
+            parent_block,
+            config,
+        )
+
+    # Case 2: justified_block_hash is not in canonical chain
+    attestation = copy.deepcopy(original_attestation)
+    attestation.justified_block_hash = b'\x11' * 32
+    with pytest.raises(ValidationError):
+        validate_attestation(
+            crystallized_state,
+            active_state,
+            attestation,
+            block,
+            parent_block,
+            config,
+        )
+
+    # Case 3: justified_slot doesn't match justified_block_hash
+    attestation = copy.deepcopy(original_attestation)
+    attestation.justified_slot = attestation.justified_slot - 1
+    with pytest.raises(ValidationError):
+        validate_attestation(
+            crystallized_state,
+            active_state,
+            attestation,
+            block,
+            parent_block,
+            config,
+        )
+
+
+@pytest.mark.parametrize(
+    (
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,shard_count'
+    ),
+    [
+        (100, 1000, 50, 10, 10),
+    ],
+)
+def test_validate_attestation_attester_bitfield(
+        attestation_validation_fixture,
+        config):
+    (
+        crystallized_state,
+        active_state,
+        original_attestation,
+        block,
+        parent_block
+    ) = attestation_validation_fixture
+
+    attestation = copy.deepcopy(original_attestation)
+    attestation.attester_bitfield = get_empty_bitfield(10)
+    with pytest.raises(ValidationError):
+        validate_attestation(
+            crystallized_state,
+            active_state,
+            attestation,
+            block,
+            parent_block,
+            config,
+        )
+
+    attestation = copy.deepcopy(original_attestation)
+    attestation_indices = get_attestation_indices(
+        crystallized_state,
+        attestation,
+        config
+    )
+    last_bit = len(attestation_indices)
+    attestation.attester_bitfield = set_voted(attestation.attester_bitfield, last_bit)
+
+    with pytest.raises(ValidationError):
+        validate_attestation(
+            crystallized_state,
+            active_state,
+            attestation,
+            block,
+            parent_block,
+            config,
+        )
+
+
+@pytest.mark.noautofixt  # Use the real BLS verification
+@pytest.mark.parametrize(
+    (
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,shard_count'
+    ),
+    [
+        (100, 1000, 50, 10, 10),
+    ],
+)
+def test_validate_attestation_aggregate_sig(attestation_validation_fixture, config):
+    (
+        crystallized_state,
+        active_state,
+        attestation,
+        block,
+        parent_block
+    ) = attestation_validation_fixture
+
+    attestation.aggregate_sig = [0, 0]
+
+    with pytest.raises(ValidationError):
+        validate_attestation(
+            crystallized_state,
+            active_state,
+            attestation,
+            block,
+            parent_block,
+            config,
+        )
 
 
 @pytest.mark.parametrize(

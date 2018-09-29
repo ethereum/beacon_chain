@@ -24,9 +24,6 @@ from beacon_chain.state.attestation_record import (
 from beacon_chain.state.block import (
     Block,
 )
-from beacon_chain.state.constants import (
-    ZERO_HASH32,
-)
 from beacon_chain.state.validator_record import (
     ValidatorRecord,
 )
@@ -68,7 +65,10 @@ def bls_sign_mock(m, k):
 
 
 @pytest.fixture(autouse=True)
-def mock_bls(mocker):
+def mock_bls(mocker, request):
+    if 'noautofixt' in request.keywords:
+        return
+
     mocker.patch('beacon_chain.utils.bls.verify', side_effect=bls_verify_mock)
     mocker.patch('beacon_chain.utils.bls.sign', side_effect=bls_sign_mock)
 
@@ -317,6 +317,9 @@ def mock_make_attestations(keymap, config):
             print("Generating attestation for shard %s" % shard_id)
             print("Committee size %s" % len(committee_indices))
 
+            justified_slot = crystallized_state.last_justified_slot
+            justified_block_hash = active_state.chain.get_block_by_slot_number(justified_slot).hash
+
             # Create attestation
             attestation = AttestationRecord(
                 slot=block.slot_number,
@@ -324,9 +327,8 @@ def mock_make_attestations(keymap, config):
                 oblique_parent_hashes=[],
                 shard_block_hash=blake(bytes(str(shard_id), 'utf-8')),
                 attester_bitfield=get_empty_bitfield(len(committee_indices)),
-                justified_slot=crystallized_state.last_justified_slot,
-                # TODO: it's a stub for now and will be changed to the correct block hash
-                justified_block_hash=ZERO_HASH32,
+                justified_slot=justified_slot,
+                justified_block_hash=justified_block_hash,
             )
 
             # Randomly pick indices to include
