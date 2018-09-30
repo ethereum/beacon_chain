@@ -200,9 +200,9 @@ def validate_attestation(crystallized_state: CrystallizedState,
     # validate aggregate_sig
     #
     pub_keys = [
-        crystallized_state.validators[index].pubkey
-        for i, index in enumerate(attestation_indices)
-        if has_voted(attestation.attester_bitfield, i)
+        crystallized_state.validators[validator_index].pubkey
+        for committee_index, validator_index in enumerate(attestation_indices)
+        if has_voted(attestation.attester_bitfield, committee_index)
     ]
     message = blake(
         attestation.slot.to_bytes(8, byteorder='big') +
@@ -245,12 +245,12 @@ def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
                 'voter_indices': set(),
                 'total_voter_deposits': 0
             }
-        for i, index in enumerate(attestation_indices):
-            if (has_voted(attestation.attester_bitfield, i) and
-                    index not in new_block_vote_cache[parent_hash]['voter_indices']):
-                new_block_vote_cache[parent_hash]['voter_indices'].add(index)
+        for committee_index, validator_index in enumerate(attestation_indices):
+            if (has_voted(attestation.attester_bitfield, committee_index) and
+                    validator_index not in new_block_vote_cache[parent_hash]['voter_indices']):
+                new_block_vote_cache[parent_hash]['voter_indices'].add(validator_index)
                 new_block_vote_cache[parent_hash]['total_voter_deposits'] += (
-                    crystallized_state.validators[index].balance
+                    crystallized_state.validators[validator_index].balance
                 )
 
     return new_block_vote_cache
@@ -553,13 +553,15 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
                 bitfield = get_empty_bitfield(len(shard_and_committee.committee))
 
             committee_crosslink = committee_crosslinks[shard_id]
-            for i, index in enumerate(shard_and_committee.committee):
-                validator = crystallized_state.validators[index]
-                if has_voted(bitfield, i):
-                    committee_crosslink['participating_validator_indices'].append(index)
+            for committee_index, validator_index in enumerate(shard_and_committee.committee):
+                validator = crystallized_state.validators[validator_index]
+                if has_voted(bitfield, committee_index):
+                    committee_crosslink['participating_validator_indices'].append(validator_index)
                     committee_crosslink['total_participated_v_deposits'] += validator.balance
                 else:
-                    committee_crosslink['non_participating_validator_indices'].append(index)
+                    committee_crosslink[
+                        'non_participating_validator_indices'
+                    ].append(validator_index)
 
                 committee_crosslink['total_v_deposits'] += validator.balance
 
