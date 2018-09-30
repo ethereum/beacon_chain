@@ -170,9 +170,13 @@ def get_new_shuffling(seed: Hash32,
     cycle_length = config['cycle_length']
     min_committee_size = config['min_committee_size']
     shard_count = config['shard_count']
+    max_commmittees_per_slot = shard_count // cycle_length
     avs = get_active_validator_indices(dynasty, validators)
     if len(avs) >= cycle_length * min_committee_size:
-        committees_per_slot = len(avs) // cycle_length // (min_committee_size * 2) + 1
+        committees_per_slot = min(
+            len(avs) // cycle_length // (min_committee_size * 2) + 1,
+            max_commmittees_per_slot
+        )
         slots_per_committee = 1
     else:
         committees_per_slot = 1

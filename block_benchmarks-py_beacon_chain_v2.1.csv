@@ -1,0 +1,4 @@
+num_attestations,validators_per_attestation,total_validators,total_deposits,block_process_seconds,crystallized_state_bytes,active_state_bytes,block_bytes
+2,244,31250,1000000,0.1017,4056416,4494,562
+16,305,312500,10000000,1.0099,40074336,7324,3392
+16,3051,3125000,100000000,10.1837,400074336,12812,8880

@@ -242,14 +242,14 @@ def process_block(crystallized_state: CrystallizedState,
                              block,
                              parent_block,
                              config)
-        new_block_vote_cache = get_updated_block_vote_cache(
-            crystallized_state,
-            active_state,
-            attestation,
-            block,
-            new_block_vote_cache,
-            config
-        )
+        # new_block_vote_cache = get_updated_block_vote_cache(
+            # crystallized_state,
+            # active_state,
+            # attestation,
+            # block,
+            # new_block_vote_cache,
+            # config
+        # )
 
     new_attestations = active_state.pending_attestations + block.attestations
     new_chain = Chain(

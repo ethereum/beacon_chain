@@ -242,6 +242,7 @@ def num_validators():
 
 @pytest.fixture
 def init_validator_keys(pubkeys, num_validators):
+    pubkeys = pubkeys * (num_validators // len(pubkeys) + 1)
     return pubkeys[:num_validators]
 
 
@@ -302,7 +303,7 @@ def mock_make_attestations(keymap, config):
             cycle_length + in_cycle_slot_height
         ]
 
-        print("Generating attestations for shards: %s" % len(indices))
+        # print("Generating attestations for shards: %s" % len(indices))
 
         proposer_index_in_committee, proposer_shard_id = get_proposer_position(
             block,
@@ -314,8 +315,8 @@ def mock_make_attestations(keymap, config):
         for shard_and_committee in indices:
             shard_id = shard_and_committee.shard_id
             committee_indices = shard_and_committee.committee
-            print("Generating attestation for shard %s" % shard_id)
-            print("Committee size %s" % len(committee_indices))
+            # print("Generating attestation for shard %s" % shard_id)
+            # print("Committee size %s" % len(committee_indices))
 
             # Create attestation
             attestation = AttestationRecord(
@@ -358,14 +359,14 @@ def mock_make_attestations(keymap, config):
                 for i, indice in enumerate(committee_indices) if is_attesting[i]
             ]
             attestation.aggregate_sig = bls.aggregate_sigs(sigs)
-            print('Aggregated sig')
+            # print('Aggregated sig')
 
             attestation_bitfield = get_empty_bitfield(len(committee_indices))
             for i, attesting in enumerate(is_attesting):
                 if attesting:
                     attestation_bitfield = set_voted(attestation_bitfield, i)
             attestation.attester_bitfield = attestation_bitfield
-            print('Aggregate bitfield:', bin(int.from_bytes(attestation_bitfield, 'big')))
+            # print('Aggregate bitfield:', bin(int.from_bytes(attestation_bitfield, 'big')))
 
             attestations.append(attestation)
 
@@ -392,7 +393,7 @@ def mock_make_child(keymap, config):
             active_state_root=b'\x00'*32,
             crystallized_state_root=b'\x00'*32
         )
-        print('Generated preliminary block header')
+        # print('Generated preliminary block header')
 
         new_crystallized_state, new_active_state = compute_state_transition(
             (crystallized_state, active_state),
@@ -400,7 +401,7 @@ def mock_make_child(keymap, config):
             block,
             config=config
         )
-        print('Calculated state transition')
+        # print('Calculated state transition')
 
         if crystallized_state == new_crystallized_state:
             block.crystallized_state_root = parent.crystallized_state_root

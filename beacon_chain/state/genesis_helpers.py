@@ -21,6 +21,9 @@ from .crystallized_state import CrystallizedState
 from .helpers import (
     get_new_shuffling,
 )
+from .config import (
+    DEFAULT_CONFIG,
+)
 
 if TYPE_CHECKING:
     from .validator_record import ValidatorRecord  # noqa: F401
@@ -39,7 +42,7 @@ def get_genesis_active_state(config: Dict[str, Any]) -> ActiveState:
 def get_genesis_crystallized_state(
         validators: List['ValidatorRecord'],
         init_shuffling_seed: Hash32,
-        config: Dict[str, Any]) -> CrystallizedState:
+        config: Dict[str, Any]=DEFAULT_CONFIG) -> CrystallizedState:
 
     current_dynasty = 1
     crosslinking_start_shard = ShardId(0)

@@ -23,7 +23,7 @@ class ValidatorRecord():
     }
 
     defaults = {
-        'pubkey': b'',
+        'pubkey': 0,
         'withdrawal_shard': 0,
         'withdrawal_address': b'\x00'*20,
         'randao_commitment': b'\x00'*32,
