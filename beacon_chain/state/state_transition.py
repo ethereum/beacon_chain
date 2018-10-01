@@ -575,16 +575,16 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
         time_since_last_confirmation = block.slot_number - crosslink.slot
         total_participated_v_deposits = committee_crosslink['total_participated_v_deposits']
         total_v_deposits = committee_crosslink['total_v_deposits']
-        for index in committee_crosslink['participating_validator_indices']:
-            validator = crystallized_state.validators[index]
-            rewards_and_penalties[index] += (
+        for validator_index in committee_crosslink['participating_validator_indices']:
+            validator = crystallized_state.validators[validator_index]
+            rewards_and_penalties[validator_index] += (
                 validator.balance //
                 reward_quotient *
-                (2 * total_participated_v_deposits // total_v_deposits - 1)
+                (2 * total_participated_v_deposits - total_v_deposits) // total_v_deposits
             )
-        for index in committee_crosslink['non_participating_validator_indices']:
-            validator = crystallized_state.validators[index]
-            rewards_and_penalties[index] -= (
+        for validator_index in committee_crosslink['non_participating_validator_indices']:
+            validator = crystallized_state.validators[validator_index]
+            rewards_and_penalties[validator_index] -= (
                 validator.balance // reward_quotient +
                 time_since_last_confirmation // quadratic_penalty_quotient
             )

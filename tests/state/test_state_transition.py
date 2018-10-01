@@ -13,6 +13,7 @@ from ssz import (
 from beacon_chain.utils.blake import blake
 from beacon_chain.utils.bitfield import (
     get_empty_bitfield,
+    has_voted,
     set_voted,
 )
 
@@ -21,9 +22,11 @@ from beacon_chain.state.chain import (
 )
 from beacon_chain.state.helpers import (
     get_attestation_indices,
+    get_shards_and_committees_for_slot,
 )
 from beacon_chain.state.state_transition import (
     fill_recent_block_hashes,
+    calculate_crosslink_rewards,
     compute_cycle_transitions,
     initialize_new_cycle,
     validate_attestation,
@@ -264,6 +267,69 @@ def test_validate_attestation_aggregate_sig(attestation_validation_fixture, conf
             parent_block,
             config,
         )
+
+
+@pytest.mark.parametrize(
+    (
+        'num_validators,max_validator_count,cycle_length,'
+        'min_committee_size,min_dynasty_length,shard_count'
+    ),
+    [
+        (200, 200, 10, 20, 20, 25),
+    ]
+)
+# sanity check test
+def test_calculate_crosslink_rewards(genesis_crystallized_state,
+                                     genesis_active_state,
+                                     genesis_block,
+                                     config,
+                                     mock_make_attestations,
+                                     mock_make_child):
+    c = genesis_crystallized_state
+    a = genesis_active_state
+    block = genesis_block
+    a.chain = Chain(head=block, blocks=[block])
+
+    # progress past first cycle transition
+    # rewards on the following cycle recalc will be based
+    # on whhat happened during this cycle
+    attestations = mock_make_attestations(
+        (c, a),
+        block,
+        # enough attesters to get a reward but not form a crosslink
+        attester_share=0.58
+    )
+    block2, c2, a2 = mock_make_child(
+        (c, a),
+        block,
+        block.slot_number + config['cycle_length'],
+        attestations
+    )
+
+    # attestation used for testing
+    attestation = attestations[0]
+
+    # create a block to trigger next cycle transition
+    attestations2 = mock_make_attestations(
+        (c2, a2),
+        block2,
+        attester_share=0.0
+    )
+    block3, c3, a3 = mock_make_child(
+        (c2, a2),
+        block2,
+        block2.slot_number + config['cycle_length'],
+        attestations2
+    )
+
+    rewards_and_penalties = calculate_crosslink_rewards(c2, a2, block3, config)
+
+    shard_and_committee = get_shards_and_committees_for_slot(c2, block2.slot_number, config)[0]
+    for committee_index, validator_index in enumerate(shard_and_committee.committee):
+        if has_voted(attestation.attester_bitfield, committee_index):
+            assert rewards_and_penalties[validator_index] > 0
+        else:
+            assert rewards_and_penalties[validator_index] < 0
 
 
 @pytest.mark.parametrize(
