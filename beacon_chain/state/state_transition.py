@@ -438,6 +438,22 @@ def fill_recent_block_hashes(active_state: ActiveState,
     )
 
 
+def get_reward_context(total_deposits: int,
+                       config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[int, int]:
+    # total_deposits should be positive
+    assert total_deposits > 0
+    total_deposits_in_ETH = total_deposits // WEI_PER_ETH
+
+    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
+    quadratic_penalty_quotient = (config['sqrt_e_drop_time'] / config['slot_duration']) ** 2
+
+    # Normally quadratic_penalty_quotient should be integer
+    assert quadratic_penalty_quotient.is_integer()
+    quadratic_penalty_quotient = int(quadratic_penalty_quotient)
+
+    return reward_quotient, quadratic_penalty_quotient
+
+
 def calculate_ffg_rewards(crystallized_state: CrystallizedState,
                           active_state: ActiveState,
                           block: 'Block',
@@ -452,16 +468,7 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
     time_since_finality = block.slot_number - crystallized_state.last_finalized_slot
 
     total_deposits = crystallized_state.total_deposits
-    # total_deposits should be positive
-    assert total_deposits > 0
-
-    total_deposits_in_ETH = total_deposits // WEI_PER_ETH
-    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
-    quadratic_penalty_quotient = (config['sqrt_e_drop_time'] / config['slot_duration']) ** 2
-
-    # Normally quadratic_penalty_quotient should be integer
-    assert quadratic_penalty_quotient.is_integer()
-    quadratic_penalty_quotient = int(quadratic_penalty_quotient)
+    reward_quotient, quadratic_penalty_quotient = get_reward_context(total_deposits, config)
 
     last_state_recalc = crystallized_state.last_state_recalc
     block_vote_cache = active_state.block_vote_cache
@@ -517,8 +524,7 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
 
     total_deposits = crystallized_state.total_deposits
     total_deposits_in_ETH = total_deposits // WEI_PER_ETH
-    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
-    quadratic_penalty_quotient = int(sqrt(config['sqrt_e_drop_time'] / config['slot_duration']))
+    reward_quotient, quadratic_penalty_quotient = get_reward_context(total_deposits, config)
 
     last_state_recalc = crystallized_state.last_state_recalc
 
@@ -566,8 +572,7 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
                 committee_crosslink['total_v_deposits'] += validator.balance
 
     # for each shard and associated validator set, apply rewards/penalties based on participation
-    for shard_id in committee_crosslinks:
-        committee_crosslink = committee_crosslinks[shard_id]
+    for shard_id, committee_crosslink in committee_crosslinks.items():
         crosslink = crystallized_state.crosslink_records[shard_id]
         if crosslink.dynasty == crystallized_state.current_dynasty:
             continue

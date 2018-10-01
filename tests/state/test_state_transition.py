@@ -292,7 +292,7 @@ def test_calculate_crosslink_rewards(genesis_crystallized_state,
 
     # progress past first cycle transition
     # rewards on the following cycle recalc will be based
-    # on whhat happened during this cycle
+    # on what happened during this cycle
     attestations = mock_make_attestations(
         (c, a),
         block,
