@@ -7,11 +7,31 @@ from beacon_chain.state.helpers import (
     get_shards_and_committees_for_slot,
     get_block_hash,
     get_proposer_position,
+    int_sqrt,
 )
 
 from tests.state.helpers import (
     get_pseudo_chain,
 )
+
+
+@pytest.mark.parametrize(
+    (
+        'n,output'
+    ),
+    [
+        (0, 0),
+        (1, 1),
+        (2, 1),
+        (4, 2),
+        (15, 3),
+        (16, 4),
+        (17, 4),
+        (10**10 + 1, 10**5)
+    ],
+)
+def test_int_sqrt(n, output):
+    assert int_sqrt(n) == output
 
 
 @pytest.mark.parametrize(
