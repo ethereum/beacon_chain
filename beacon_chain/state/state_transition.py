@@ -1,5 +1,3 @@
-from math import sqrt
-
 from typing import (
     Any,
     Dict,
@@ -59,6 +57,7 @@ from .helpers import (
     get_proposer_position,
     get_shards_and_committees_for_slot,
     get_signed_parent_hashes,
+    int_sqrt,
 )
 
 if TYPE_CHECKING:
@@ -444,7 +443,7 @@ def get_reward_context(total_deposits: int,
     assert total_deposits > 0
     total_deposits_in_ETH = total_deposits // WEI_PER_ETH
 
-    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
+    reward_quotient = config['base_reward_quotient'] * int_sqrt(total_deposits_in_ETH)
     quadratic_penalty_quotient = (config['sqrt_e_drop_time'] / config['slot_duration']) ** 2
 
     # Normally quadratic_penalty_quotient should be integer

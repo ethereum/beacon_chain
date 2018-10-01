@@ -38,6 +38,15 @@ def is_power_of_two(num: int) -> bool:
     return ((num & (num - 1)) == 0) and num != 0
 
 
+def int_sqrt(n: int) -> int:
+    x = n
+    y = (x + 1) // 2
+    while y < x:
+        x = y
+        y = (x + n // x) // 2
+    return x
+
+
 # Given the head block to attest to, collect the list of hashes to be
 # signed in the attestation
 def get_hashes_to_sign(active_state: 'ActiveState',
