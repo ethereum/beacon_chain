@@ -523,7 +523,6 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
     rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
     total_deposits = crystallized_state.total_deposits
-    total_deposits_in_ETH = total_deposits // WEI_PER_ETH
     reward_quotient, quadratic_penalty_quotient = get_reward_context(total_deposits, config)
 
     last_state_recalc = crystallized_state.last_state_recalc
