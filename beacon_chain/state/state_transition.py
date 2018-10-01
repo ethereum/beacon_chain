@@ -28,7 +28,9 @@ from beacon_chain.utils.blake import (
 )
 from beacon_chain.utils.bitfield import (
     get_bitfield_length,
+    get_empty_bitfield,
     has_voted,
+    or_bitfields,
 )
 
 from .config import (
@@ -55,6 +57,7 @@ from .helpers import (
     get_new_recent_block_hashes,
     get_new_shuffling,
     get_proposer_position,
+    get_shards_and_committees_for_slot,
     get_signed_parent_hashes,
 )
 
@@ -197,9 +200,9 @@ def validate_attestation(crystallized_state: CrystallizedState,
     # validate aggregate_sig
     #
     pub_keys = [
-        crystallized_state.validators[index].pubkey
-        for i, index in enumerate(attestation_indices)
-        if has_voted(attestation.attester_bitfield, i)
+        crystallized_state.validators[validator_index].pubkey
+        for committee_index, validator_index in enumerate(attestation_indices)
+        if has_voted(attestation.attester_bitfield, committee_index)
     ]
     message = blake(
         attestation.slot.to_bytes(8, byteorder='big') +
@@ -242,12 +245,12 @@ def get_updated_block_vote_cache(crystallized_state: CrystallizedState,
                 'voter_indices': set(),
                 'total_voter_deposits': 0
             }
-        for i, index in enumerate(attestation_indices):
-            if (has_voted(attestation.attester_bitfield, i) and
-                    index not in new_block_vote_cache[parent_hash]['voter_indices']):
-                new_block_vote_cache[parent_hash]['voter_indices'].add(index)
+        for committee_index, validator_index in enumerate(attestation_indices):
+            if (has_voted(attestation.attester_bitfield, committee_index) and
+                    validator_index not in new_block_vote_cache[parent_hash]['voter_indices']):
+                new_block_vote_cache[parent_hash]['voter_indices'].add(validator_index)
                 new_block_vote_cache[parent_hash]['total_voter_deposits'] += (
-                    crystallized_state.validators[index].balance
+                    crystallized_state.validators[validator_index].balance
                 )
 
     return new_block_vote_cache
@@ -435,6 +438,22 @@ def fill_recent_block_hashes(active_state: ActiveState,
     )
 
 
+def get_reward_context(total_deposits: int,
+                       config: Dict[str, Any]=DEFAULT_CONFIG) -> Tuple[int, int]:
+    # total_deposits should be positive
+    assert total_deposits > 0
+    total_deposits_in_ETH = total_deposits // WEI_PER_ETH
+
+    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
+    quadratic_penalty_quotient = (config['sqrt_e_drop_time'] / config['slot_duration']) ** 2
+
+    # Normally quadratic_penalty_quotient should be integer
+    assert quadratic_penalty_quotient.is_integer()
+    quadratic_penalty_quotient = int(quadratic_penalty_quotient)
+
+    return reward_quotient, quadratic_penalty_quotient
+
+
 def calculate_ffg_rewards(crystallized_state: CrystallizedState,
                           active_state: ActiveState,
                           block: 'Block',
@@ -449,15 +468,7 @@ def calculate_ffg_rewards(crystallized_state: CrystallizedState,
     time_since_finality = block.slot_number - crystallized_state.last_finalized_slot
 
     total_deposits = crystallized_state.total_deposits
-    # total_deposits should be positive
-    assert total_deposits > 0
-
-    total_deposits_in_ETH = total_deposits // WEI_PER_ETH
-    reward_quotient = config['base_reward_quotient'] * int(sqrt(total_deposits_in_ETH))
-    quadratic_penalty_quotient = (config['sqrt_e_drop_time'] / config['slot_duration']) ** 2
-    # Normally quadratic_penalty_quotient should be integer
-    assert quadratic_penalty_quotient.is_integer()
-    quadratic_penalty_quotient = int(quadratic_penalty_quotient)
+    reward_quotient, quadratic_penalty_quotient = get_reward_context(total_deposits, config)
 
     last_state_recalc = crystallized_state.last_state_recalc
     block_vote_cache = active_state.block_vote_cache
@@ -511,10 +522,76 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
     validators = crystallized_state.validators
     rewards_and_penalties = [0 for _ in validators]  # type: List[int]
 
-    #
-    # STUB
-    # Still need clarity in spec to properly fill these calculations
-    #
+    total_deposits = crystallized_state.total_deposits
+    reward_quotient, quadratic_penalty_quotient = get_reward_context(total_deposits, config)
+
+    last_state_recalc = crystallized_state.last_state_recalc
+
+    # collect crosslink participation data for each shard_id that was attempted to
+    # be crosslinked two cycles ago
+    committee_crosslinks = {}  # type: Dict[str, Any]
+    for slot in range(max(last_state_recalc - config['cycle_length'], 0), last_state_recalc):
+        shards_and_committees = get_shards_and_committees_for_slot(
+            crystallized_state,
+            slot,
+            config=config
+        )
+        for shard_and_committee in shards_and_committees:
+            shard_id = shard_and_committee.shard_id
+            if shard_id not in committee_crosslinks:
+                committee_crosslinks[shard_id] = {
+                    'participating_validator_indices': [],
+                    'non_participating_validator_indices': [],
+                    'total_participated_v_deposits': 0,
+                    'total_v_deposits': 0
+                }
+            attestations = [
+                attestation for attestation in active_state.pending_attestations
+                if attestation.slot == slot and attestation.shard_id == shard_id
+            ]
+            if attestations:
+                bitfields = [
+                    attestation.attester_bitfield for attestation in attestations
+                ]
+                bitfield = or_bitfields(bitfields)
+            else:
+                bitfield = get_empty_bitfield(len(shard_and_committee.committee))
+
+            committee_crosslink = committee_crosslinks[shard_id]
+            for committee_index, validator_index in enumerate(shard_and_committee.committee):
+                validator = crystallized_state.validators[validator_index]
+                if has_voted(bitfield, committee_index):
+                    committee_crosslink['participating_validator_indices'].append(validator_index)
+                    committee_crosslink['total_participated_v_deposits'] += validator.balance
+                else:
+                    committee_crosslink[
+                        'non_participating_validator_indices'
+                    ].append(validator_index)
+
+                committee_crosslink['total_v_deposits'] += validator.balance
+
+    # for each shard and associated validator set, apply rewards/penalties based on participation
+    for shard_id, committee_crosslink in committee_crosslinks.items():
+        crosslink = crystallized_state.crosslink_records[shard_id]
+        if crosslink.dynasty == crystallized_state.current_dynasty:
+            continue
+
+        time_since_last_confirmation = block.slot_number - crosslink.slot
+        total_participated_v_deposits = committee_crosslink['total_participated_v_deposits']
+        total_v_deposits = committee_crosslink['total_v_deposits']
+        for validator_index in committee_crosslink['participating_validator_indices']:
+            validator = crystallized_state.validators[validator_index]
+            rewards_and_penalties[validator_index] += (
+                validator.balance //
+                reward_quotient *
+                (2 * total_participated_v_deposits - total_v_deposits) // total_v_deposits
+            )
+        for validator_index in committee_crosslink['non_participating_validator_indices']:
+            validator = crystallized_state.validators[validator_index]
+            rewards_and_penalties[validator_index] -= (
+                (validator.balance // reward_quotient) +
+                (validator.balance * time_since_last_confirmation // quadratic_penalty_quotient)
+            )
 
     return rewards_and_penalties
 

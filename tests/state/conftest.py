@@ -331,9 +331,9 @@ def mock_make_attestations(keymap, config):
                 justified_block_hash=justified_block_hash,
             )
 
-            # Randomly pick indices to include
+            # fill with roughly attester share fraction of voters
             is_attesting = [
-                random.random() < attester_share for _ in range(len(committee_indices))
+                i < attester_share * len(committee_indices) for i in range(len(committee_indices))
             ]
             # Proposer always attests
             if shard_id == proposer_shard_id:
