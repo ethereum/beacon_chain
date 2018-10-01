@@ -585,8 +585,8 @@ def calculate_crosslink_rewards(crystallized_state: CrystallizedState,
         for validator_index in committee_crosslink['non_participating_validator_indices']:
             validator = crystallized_state.validators[validator_index]
             rewards_and_penalties[validator_index] -= (
-                validator.balance // reward_quotient +
-                time_since_last_confirmation // quadratic_penalty_quotient
+                (validator.balance // reward_quotient) +
+                (validator.balance * time_since_last_confirmation // quadratic_penalty_quotient)
             )
 
     return rewards_and_penalties
