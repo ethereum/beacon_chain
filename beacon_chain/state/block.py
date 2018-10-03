@@ -20,7 +20,7 @@ class Block():
         # Hash of the parent block
         'parent_hash': 'hash32',
         # Slot number (for the PoS mechanism)
-        'slot_number': 'int64',
+        'slot_number': 'uint64',
         # Randao commitment reveal
         'randao_reveal': 'hash32',
         # Attestations

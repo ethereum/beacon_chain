@@ -7,9 +7,9 @@ from typing import (  # noqa: F401
 class ShardAndCommittee():
     fields = {
         # The shard ID
-        'shard_id': 'int16',
+        'shard_id': 'uint16',
         # Validator indices
-        'committee': ['int24'],
+        'committee': ['uint24'],
     }
 
     defaults = {

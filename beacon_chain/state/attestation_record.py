@@ -10,14 +10,14 @@ from beacon_chain.state.constants import (
 
 class AttestationRecord():
     fields = {
-        'slot': 'int64',
-        'shard_id': 'int16',
+        'slot': 'uint64',
+        'shard_id': 'uint16',
         'oblique_parent_hashes': ['hash32'],
         'shard_block_hash': 'hash32',
         'attester_bitfield': 'bytes',
-        'justified_slot': 'int64',
+        'justified_slot': 'uint64',
         'justified_block_hash': 'hash32',
-        'aggregate_sig': ['int256'],
+        'aggregate_sig': ['uint256'],
     }
     defaults = {
         'slot': 0,
