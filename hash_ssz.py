@@ -1,8 +1,8 @@
-from hashlib import blake2s
+from hashlib import blake2b
 from beacon_chain.state import crystallized_state as cs
 
 def hash(x):
-    return blake2s(x).digest()[:32]
+    return blake2b(x).digest()[:32]
 
 CHUNKSIZE = 128
 
@@ -37,7 +37,7 @@ def hash_ssz(val, typ=None):
         return val
     elif isinstance(typ, str) and typ[:3] == 'int':
         length = int(typ[3:])
-        assert length % 8 == 0 
+        assert length % 8 == 0
         return val.to_bytes(length // 8, 'big', signed=True)
     elif isinstance(typ, str) and typ[:4] == 'uint':
         length = int(typ[4:])

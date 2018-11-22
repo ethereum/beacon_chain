@@ -2,10 +2,10 @@ import hash_ssz
 from beacon_chain.state import crystallized_state as cs
 from ssz import ssz
 import time
-from hashlib import blake2s
+from hashlib import blake2b
 
 def hash(x):
-    return blake2s(x).digest()[:32]
+    return blake2b(x).digest()[:32]
 
 v = cs.ValidatorRecord(pubkey=3**160, withdrawal_shard=567, withdrawal_address=b'\x35' * 20, randao_commitment=b'\x57' * 20, balance=32 * 10**18, start_dynasty=7, end_dynasty=17284)
 c = cs.CrosslinkRecord(dynasty=4, slot=12847, hash=b'\x67' * 32)
