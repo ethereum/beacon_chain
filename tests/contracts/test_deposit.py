@@ -5,18 +5,14 @@ import pytest
     'success,amount_deposit',
     [
         (True, 32),
-        (False, 31),
-        (False, 33),
-        (False, 0)
+        (True, 1),
+        (False, 0),
+        (False, 33)
     ]
 )
-def test_deposit(registration_contract, a0, w3, success, amount_deposit, assert_tx_failed):
+def test_deposit_amount(registration_contract, w3, success, amount_deposit, assert_tx_failed):
 
-    call = registration_contract.functions.deposit(
-        b'\x00'*32,
-        43,
-        a0,
-        b'\x00'*32)
+    call = registration_contract.functions.deposit(b'\x10' * 100)
     if success:
         assert call.transact({"value": w3.toWei(amount_deposit, "ether")})
     else:
@@ -25,37 +21,21 @@ def test_deposit(registration_contract, a0, w3, success, amount_deposit, assert_
         )
 
 
-def test_no_reuse_of_pubkey(registration_contract, a0, w3, assert_tx_failed):
-
-    call = registration_contract.functions.deposit(
-        b'\x55'*32,
-        43,
-        a0,
-        b'\x00'*32)
-
-    # Register pubkey b'\x55'*32 once.
-    assert call.transact({"value": w3.toWei(32, "ether")})
-
-    # Register pubkey b'\x55'*32 twice would fail
-    assert_tx_failed(
-        lambda: call.transact({"value": w3.toWei(32, "ether")})
-    )
-
-
-def test_log_is_captured(registration_contract, a0, w3):
-    log_filter = registration_contract.events.Deposit.createFilter(
+def test_deposit_log(registration_contract, a0, w3):
+    log_filter = registration_contract.events.Eth1Deposit.createFilter(
         fromBlock='latest')
 
+    deposit_parameters = b'\x10' * 100
+    deposit_amount = 32 * 10**9
     registration_contract.functions.deposit(
-        b'\x00'*32,
-        43,
-        a0,
-        b'\x00'*32).transact({"value": w3.toWei(32, "ether")})
+        deposit_parameters).transact({"value": w3.toWei(deposit_amount, "gwei")})
 
     logs = log_filter.get_new_entries()
+    assert len(logs) == 1
     log = logs[0]['args']
 
-    assert log['_pubkey'] == b'\x00'*32
-    assert log['_withdrawal_shard_id'] == 43
-    assert log['_withdrawal_address'] == a0
-    assert log['_randao_commitment'] == b'\x00'*32
+    amount_bytes8 = deposit_amount.to_bytes(8, 'big')
+    timestamp_bytes8 = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp']).to_bytes(8, 'big')
+    assert log['previous_receipt_root'] == b'\x00' * 32
+    assert log['data'] == amount_bytes8 + timestamp_bytes8 + deposit_parameters
+    assert log['deposit_count'] == 0
