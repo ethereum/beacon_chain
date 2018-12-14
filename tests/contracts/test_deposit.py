@@ -64,7 +64,7 @@ def test_reciept_tree(registration_contract, w3, assert_tx_failed):
         deposit_parameters = i.to_bytes(1, 'big') * 100
         registration_contract.functions.deposit(
             deposit_parameters).transact({"value": w3.toWei(deposit_amount, "gwei")})
-        
+
         timestamp_bytes8 = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp']).to_bytes(8, 'big')
         data = amount_bytes8 + timestamp_bytes8 + deposit_parameters
         leaf_nodes.append(w3.sha3(data))
@@ -76,7 +76,6 @@ def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
     # CHAIN_START_FULL_DEPOSIT_THRESHOLD is adjusted to 5
     # First make 1 deposit with value below MAX_DEPOSIT
     min_deposit_amount = 1 * 10**9
-    amount_bytes8 = min_deposit_amount.to_bytes(8, 'big')
     deposit_parameters = b'\x01' * 100
     modified_registration_contract.functions.deposit(
         deposit_parameters).transact({"value": w3.toWei(min_deposit_amount, "gwei")})
@@ -85,7 +84,6 @@ def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
         fromBlock='latest')
 
     max_deposit_amount = 32 * 10**9
-    amount_bytes8 = max_deposit_amount.to_bytes(8, 'big')
     # Next make 4 deposit with value MAX_DEPOSIT
     for i in range(2, 6):
         deposit_parameters = i.to_bytes(1, 'big') * 100
