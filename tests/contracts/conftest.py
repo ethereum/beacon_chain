@@ -1,4 +1,5 @@
 import os
+import re
 import pytest
 import eth_tester
 from eth_tester import (
@@ -47,6 +48,27 @@ def w3(tester):
 def registration_contract(w3, tester, registration_code):
     contract_bytecode = compiler.compile(registration_code)
     contract_abi = compiler.mk_full_signature(registration_code)
+    registration = w3.eth.contract(
+        abi=contract_abi,
+        bytecode=contract_bytecode)
+    tx_hash = registration.constructor().transact()
+    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+    registration_deployed = w3.eth.contract(
+        address=tx_receipt.contractAddress,
+        abi=contract_abi
+    )
+    return registration_deployed
+
+
+@pytest.fixture
+def modified_registration_contract(w3, tester, registration_code):
+    # Set CHAIN_START_FULL_DEPOSIT_THRESHOLD to 5
+    modified_registration_code = re.sub(
+        r'CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant\(uint256\) = [0-9]+',
+        'CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant(uint256) = 5',
+        registration_code)
+    contract_bytecode = compiler.compile(modified_registration_code)
+    contract_abi = compiler.mk_full_signature(modified_registration_code)
     registration = w3.eth.contract(
         abi=contract_abi,
         bytecode=contract_bytecode)
