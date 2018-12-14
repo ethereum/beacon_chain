@@ -67,6 +67,7 @@ def modified_registration_contract(w3, tester, registration_code):
         r'CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant\(uint256\) = [0-9]+',
         'CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant(uint256) = 5',
         registration_code)
+    assert modified_registration_code != registration_code
     contract_bytecode = compiler.compile(modified_registration_code)
     contract_abi = compiler.mk_full_signature(modified_registration_code)
     registration = w3.eth.contract(
