@@ -2,7 +2,7 @@ import pytest
 
 import eth_utils
 
-from conftest import (
+from tests.contracts.conftest import (
     MAX_DEPOSIT,
     MIN_DEPOSIT,
     DEPOSIT_CONTRACT_TREE_DEPTH,
