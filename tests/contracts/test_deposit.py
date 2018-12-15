@@ -1,11 +1,19 @@
 import pytest
 
+import eth_utils
+
+from conftest import (
+    MAX_DEPOSIT,
+    MIN_DEPOSIT,
+    DEPOSIT_CONTRACT_TREE_DEPTH,
+)
+
 
 def compute_merkle_root(w3, leaf_nodes):
     assert len(leaf_nodes) >= 1
     empty_node = b'\x00' * 32
     child_nodes = leaf_nodes[:]
-    for i in range(32):
+    for i in range(DEPOSIT_CONTRACT_TREE_DEPTH):
         parent_nodes = []
         if len(child_nodes) % 2 == 1:
             child_nodes.append(empty_node)
@@ -18,10 +26,10 @@ def compute_merkle_root(w3, leaf_nodes):
 @pytest.mark.parametrize(
     'success,amount_deposit',
     [
-        (True, 32),
-        (True, 1),
-        (False, 0),
-        (False, 33)
+        (True, MAX_DEPOSIT),
+        (True, MIN_DEPOSIT),
+        (False, MIN_DEPOSIT - 1),
+        (False, MAX_DEPOSIT + 1)
     ]
 )
 def test_deposit_amount(registration_contract, w3, success, amount_deposit, assert_tx_failed):
@@ -37,12 +45,14 @@ def test_deposit_amount(registration_contract, w3, success, amount_deposit, asse
 
 def test_deposit_log(registration_contract, a0, w3):
     log_filter = registration_contract.events.Eth1Deposit.createFilter(
-        fromBlock='latest')
+        fromBlock='latest',
+    )
 
     deposit_input = b'\x10' * 100
-    deposit_amount = 32 * 10**9
+    deposit_amount = MAX_DEPOSIT * eth_utils.denoms.gwei
     registration_contract.functions.deposit(
-        deposit_input).transact({"value": w3.toWei(deposit_amount, "gwei")})
+        deposit_input,
+    ).transact({"value": w3.toWei(deposit_amount, "gwei")})
 
     logs = log_filter.get_new_entries()
     assert len(logs) == 1
@@ -56,14 +66,15 @@ def test_deposit_log(registration_contract, a0, w3):
 
 
 def test_reciept_tree(registration_contract, w3, assert_tx_failed):
-    deposit_amount = 32 * 10**9
+    deposit_amount = MAX_DEPOSIT * eth_utils.denoms.gwei
     amount_bytes8 = deposit_amount.to_bytes(8, 'big')
 
     leaf_nodes = []
     for i in range(1, 10):
         deposit_input = i.to_bytes(1, 'big') * 100
         registration_contract.functions.deposit(
-            deposit_input).transact({"value": w3.toWei(deposit_amount, "gwei")})
+            deposit_input,
+        ).transact({"value": w3.toWei(deposit_amount, "gwei")})
 
         timestamp_bytes8 = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp']).to_bytes(8, 'big')
         data = amount_bytes8 + timestamp_bytes8 + deposit_input
@@ -75,20 +86,23 @@ def test_reciept_tree(registration_contract, w3, assert_tx_failed):
 def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
     # CHAIN_START_FULL_DEPOSIT_THRESHOLD is adjusted to 5
     # First make 1 deposit with value below MAX_DEPOSIT
-    min_deposit_amount = 1 * 10**9
+    min_deposit_amount = MIN_DEPOSIT * eth_utils.denoms.gwei  # in gwei
     deposit_input = b'\x01' * 100
     modified_registration_contract.functions.deposit(
-        deposit_input).transact({"value": w3.toWei(min_deposit_amount, "gwei")})
+        deposit_input,
+    ).transact({"value": w3.toWei(min_deposit_amount, "gwei")})
 
     log_filter = modified_registration_contract.events.ChainStart.createFilter(
-        fromBlock='latest')
+        fromBlock='latest',
+    )
 
-    max_deposit_amount = 32 * 10**9
+    max_deposit_amount = MAX_DEPOSIT * eth_utils.denoms.gwei
     # Next make 4 deposit with value MAX_DEPOSIT
     for i in range(2, 6):
         deposit_input = i.to_bytes(1, 'big') * 100
         modified_registration_contract.functions.deposit(
-            deposit_input).transact({"value": w3.toWei(max_deposit_amount, "gwei")})
+            deposit_input,
+        ).transact({"value": w3.toWei(max_deposit_amount, "gwei")})
         logs = log_filter.get_new_entries()
         # ChainStart event should not be triggered
         assert len(logs) == 0
@@ -96,6 +110,7 @@ def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
     # Make 1 more deposit with value MAX_DEPOSIT to trigger ChainStart event
     deposit_input = b'\x06' * 100
     modified_registration_contract.functions.deposit(
-        deposit_input).transact({"value": w3.toWei(max_deposit_amount, "gwei")})
+        deposit_input,
+    ).transact({"value": w3.toWei(max_deposit_amount, "gwei")})
     logs = log_filter.get_new_entries()
     assert len(logs) == 1

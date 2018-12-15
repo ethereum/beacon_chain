@@ -11,6 +11,12 @@ from web3 import Web3
 from vyper import compiler
 
 
+# Constants
+MIN_DEPOSIT = 1  # ETH
+MAX_DEPOSIT = 32  # ETH
+DEPOSIT_CONTRACT_TREE_DEPTH = 32
+
+
 def get_dirs(path):
     own_dir = os.path.dirname(os.path.realpath(__file__))
     abs_contract_path = os.path.realpath(
@@ -66,7 +72,8 @@ def modified_registration_contract(w3, tester, registration_code):
     modified_registration_code = re.sub(
         r'CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant\(uint256\) = [0-9]+',
         'CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant(uint256) = 5',
-        registration_code)
+        registration_code,
+    )
     assert modified_registration_code != registration_code
     contract_bytecode = compiler.compile(modified_registration_code)
     contract_abi = compiler.mk_full_signature(modified_registration_code)
