@@ -72,9 +72,11 @@ def test_reciept_tree(registration_contract, w3, assert_tx_failed):
     leaf_nodes = []
     for i in range(1, 10):
         deposit_input = i.to_bytes(1, 'big') * 100
-        registration_contract.functions.deposit(
+        tx_hash = registration_contract.functions.deposit(
             deposit_input,
         ).transact({"value": w3.toWei(deposit_amount, "gwei")})
+        receipt =  w3.eth.getTransactionReceipt(tx_hash)
+        print("deposit transaction consumes %d gas", receipt['gasUsed'])
 
         timestamp_bytes8 = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp']).to_bytes(8, 'big')
         data = amount_bytes8 + timestamp_bytes8 + deposit_input
