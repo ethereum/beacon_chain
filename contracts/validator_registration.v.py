@@ -14,14 +14,14 @@ full_deposit_count: uint256
 
 @payable
 @public
-def deposit(deposit_parameters: bytes[2048]):
+def deposit(deposit_input: bytes[2048]):
     assert msg.value >= as_wei_value(MIN_DEPOSIT, "ether")
     assert msg.value <= as_wei_value(MAX_DEPOSIT, "ether")
 
     index: uint256 = self.deposit_count + 2**DEPOSIT_CONTRACT_TREE_DEPTH
     msg_gwei_bytes8: bytes[8] = slice(concat("", convert(msg.value / GWEI_PER_ETH, bytes32)), start=24, len=8)
     timestamp_bytes8: bytes[8] = slice(concat("", convert(block.timestamp, bytes32)), start=24, len=8)
-    deposit_data: bytes[2064] = concat(msg_gwei_bytes8, timestamp_bytes8, deposit_parameters)
+    deposit_data: bytes[2064] = concat(msg_gwei_bytes8, timestamp_bytes8, deposit_input)
 
     log.Eth1Deposit(self.receipt_tree[1], deposit_data, self.deposit_count)
 
