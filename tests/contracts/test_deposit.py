@@ -116,9 +116,16 @@ def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
     ).transact({"value": w3.toWei(max_deposit_amount, "gwei")})
     logs = log_filter.get_new_entries()
     assert len(logs) == 1
-
     timestamp = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp'])
     timestamp_day_boundary = timestamp + (86400 - timestamp % 86400)
     log = logs[0]['args']
     assert log['receipt_root'] == modified_registration_contract.functions.get_receipt_root().call()
     assert int.from_bytes(log['time'], byteorder='big') == timestamp_day_boundary
+
+    # Make 1 deposit with value MAX_DEPOSIT and check that ChainStart event is not triggered
+    deposit_input = b'\x07' * 100
+    modified_registration_contract.functions.deposit(
+        deposit_input,
+    ).transact({"value": w3.toWei(max_deposit_amount, "gwei")})
+    logs = log_filter.get_new_entries()
+    assert len(logs) == 0
