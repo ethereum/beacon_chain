@@ -86,7 +86,8 @@ def test_reciept_tree(registration_contract, w3, assert_tx_failed):
 
 
 def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
-    # CHAIN_START_FULL_DEPOSIT_THRESHOLD is adjusted to 5
+    t = getattr(modified_registration_contract, 'chain_start_full_deposit_threshold')
+    # CHAIN_START_FULL_DEPOSIT_THRESHOLD is set to t
     # First make 1 deposit with value below MAX_DEPOSIT
     min_deposit_amount = MIN_DEPOSIT * eth_utils.denoms.gwei  # in gwei
     deposit_input = b'\x01' * 100
@@ -99,8 +100,8 @@ def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
     )
 
     max_deposit_amount = MAX_DEPOSIT * eth_utils.denoms.gwei
-    # Next make 4 deposit with value MAX_DEPOSIT
-    for i in range(2, 6):
+    # Next make t-1 deposit with value MAX_DEPOSIT
+    for i in range(2, t+1):
         deposit_input = i.to_bytes(1, 'big') * 100
         modified_registration_contract.functions.deposit(
             deposit_input,
