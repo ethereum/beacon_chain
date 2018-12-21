@@ -1,3 +1,5 @@
+from random import randint
+
 import pytest
 
 import eth_utils
@@ -88,27 +90,31 @@ def test_reciept_tree(registration_contract, w3, assert_tx_failed):
 def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
     t = getattr(modified_registration_contract, 'chain_start_full_deposit_threshold')
     # CHAIN_START_FULL_DEPOSIT_THRESHOLD is set to t
-    # First make 1 deposit with value below MAX_DEPOSIT
     min_deposit_amount = MIN_DEPOSIT * eth_utils.denoms.gwei  # in gwei
-    deposit_input = b'\x01' * 100
-    modified_registration_contract.functions.deposit(
-        deposit_input,
-    ).transact({"value": w3.toWei(min_deposit_amount, "gwei")})
-
+    max_deposit_amount = MAX_DEPOSIT * eth_utils.denoms.gwei
     log_filter = modified_registration_contract.events.ChainStart.createFilter(
         fromBlock='latest',
     )
 
-    max_deposit_amount = MAX_DEPOSIT * eth_utils.denoms.gwei
-    # Next make t-1 deposit with value MAX_DEPOSIT
-    for i in range(2, t+1):
-        deposit_input = i.to_bytes(1, 'big') * 100
-        modified_registration_contract.functions.deposit(
-            deposit_input,
-        ).transact({"value": w3.toWei(max_deposit_amount, "gwei")})
-        logs = log_filter.get_new_entries()
-        # ChainStart event should not be triggered
-        assert len(logs) == 0
+    index_not_full_deposit = randint(0, t-1)
+    for i in range(t):
+        if i == index_not_full_deposit:
+            # Deposit with value below MAX_DEPOSIT
+            deposit_input = b'\x01' * 100
+            modified_registration_contract.functions.deposit(
+                deposit_input,
+            ).transact({"value": w3.toWei(min_deposit_amount, "gwei")})
+            # ChainStart event should not be triggered
+            assert len(logs) == 0
+        else:
+            # Deposit with value MAX_DEPOSIT
+            deposit_input = i.to_bytes(1, 'big') * 100
+            modified_registration_contract.functions.deposit(
+                deposit_input,
+            ).transact({"value": w3.toWei(max_deposit_amount, "gwei")})
+            logs = log_filter.get_new_entries()
+            # ChainStart event should not be triggered
+            assert len(logs) == 0
 
     # Make 1 more deposit with value MAX_DEPOSIT to trigger ChainStart event
     deposit_input = b'\x06' * 100
