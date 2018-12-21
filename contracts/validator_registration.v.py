@@ -3,7 +3,7 @@ MAX_DEPOSIT: constant(uint256) = 32  # ETH
 GWEI_PER_ETH: constant(uint256) = 1000000000  # 10**9
 CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant(uint256) = 16384  # 2**14
 DEPOSIT_CONTRACT_TREE_DEPTH: constant(uint256) = 32
-TWO_TO_POWER_OF_TREE_DEPTH = 4294967296  # 2**32
+TWO_TO_POWER_OF_TREE_DEPTH: constant(uint256) = 4294967296  # 2**32
 SECONDS_PER_DAY: constant(uint256) = 86400
 
 Eth1Deposit: event({previous_receipt_root: bytes32, data: bytes[2064], deposit_count: uint256})
