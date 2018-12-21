@@ -69,11 +69,16 @@ def registration_contract(w3, tester, registration_code):
 
 @pytest.fixture(scope="session")
 def chain_start_full_deposit_thresholds():
-    return [randint(1,5), randint(6,10), randint(11,15)]
+    return [randint(1, 5), randint(6, 10), randint(11, 15)]
 
 
 @pytest.fixture(params=[0, 1, 2])
-def modified_registration_contract(request, w3, tester, registration_code, chain_start_full_deposit_thresholds):
+def modified_registration_contract(
+        request,
+        w3,
+        tester,
+        registration_code,
+        chain_start_full_deposit_thresholds):
     # Set CHAIN_START_FULL_DEPOSIT_THRESHOLD to different threshold t
     t = str(chain_start_full_deposit_thresholds[request.param])
     modified_registration_code = re.sub(

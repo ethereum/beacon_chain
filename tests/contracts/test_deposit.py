@@ -50,21 +50,25 @@ def test_deposit_log(registration_contract, a0, w3):
         fromBlock='latest',
     )
 
-    deposit_input = b'\x10' * 100
-    deposit_amount = MAX_DEPOSIT * eth_utils.denoms.gwei
-    registration_contract.functions.deposit(
-        deposit_input,
-    ).transact({"value": w3.toWei(deposit_amount, "gwei")})
+    deposit_amount = [randint(MIN_DEPOSIT, MAX_DEPOSIT) * eth_utils.denoms.gwei for _ in range(3)]
+    for i in range(3):
+        deposit_input = i.to_bytes(1, 'big') * 100
+        registration_contract.functions.deposit(
+            deposit_input,
+        ).transact({"value": w3.toWei(deposit_amount[i], "gwei")})
 
-    logs = log_filter.get_new_entries()
-    assert len(logs) == 1
-    log = logs[0]['args']
+        logs = log_filter.get_new_entries()
+        assert len(logs) == 1
+        log = logs[0]['args']
 
-    amount_bytes8 = deposit_amount.to_bytes(8, 'big')
-    timestamp_bytes8 = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp']).to_bytes(8, 'big')
-    assert log['previous_receipt_root'] == b'\x00' * 32
-    assert log['data'] == amount_bytes8 + timestamp_bytes8 + deposit_input
-    assert log['deposit_count'] == 0
+        amount_bytes8 = deposit_amount[i].to_bytes(8, 'big')
+        timestamp_bytes8 = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp']).to_bytes(8, 'big')
+        if i == 0:
+            assert log['previous_receipt_root'] == b'\x00' * 32
+        else:
+            assert log['previous_receipt_root'] != b'\x00' * 32
+        assert log['data'] == amount_bytes8 + timestamp_bytes8 + deposit_input
+        assert log['deposit_count'] == i
 
 
 def test_reciept_tree(registration_contract, w3, assert_tx_failed):
@@ -104,6 +108,7 @@ def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
             modified_registration_contract.functions.deposit(
                 deposit_input,
             ).transact({"value": w3.toWei(min_deposit_amount, "gwei")})
+            logs = log_filter.get_new_entries()
             # ChainStart event should not be triggered
             assert len(logs) == 0
         else:
