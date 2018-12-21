@@ -72,19 +72,19 @@ def test_deposit_log(registration_contract, a0, w3):
 
 
 def test_reciept_tree(registration_contract, w3, assert_tx_failed):
-    deposit_amount = MAX_DEPOSIT * eth_utils.denoms.gwei
-    amount_bytes8 = deposit_amount.to_bytes(8, 'big')
+    deposit_amount = [randint(MIN_DEPOSIT, MAX_DEPOSIT) * eth_utils.denoms.gwei for _ in range(10)]
 
     leaf_nodes = []
-    for i in range(1, 10):
+    for i in range(0, 10):
         deposit_input = i.to_bytes(1, 'big') * 100
         tx_hash = registration_contract.functions.deposit(
             deposit_input,
-        ).transact({"value": w3.toWei(deposit_amount, "gwei")})
+        ).transact({"value": w3.toWei(deposit_amount[i], "gwei")})
         receipt = w3.eth.getTransactionReceipt(tx_hash)
         print("deposit transaction consumes %d gas" % receipt['gasUsed'])
 
         timestamp_bytes8 = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp']).to_bytes(8, 'big')
+        amount_bytes8 = deposit_amount[i].to_bytes(8, 'big')
         data = amount_bytes8 + timestamp_bytes8 + deposit_input
         leaf_nodes.append(w3.sha3(data))
         root = compute_merkle_root(w3, leaf_nodes)
