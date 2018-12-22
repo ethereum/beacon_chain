@@ -53,7 +53,7 @@ def w3(tester):
 
 @pytest.fixture
 def registration_contract(w3, tester, registration_code):
-    contract_bytecode = compiler.compile(registration_code)
+    contract_bytecode = compiler.compile_code(registration_code)['bytecode']
     contract_abi = compiler.mk_full_signature(registration_code)
     registration = w3.eth.contract(
         abi=contract_abi,
@@ -87,7 +87,7 @@ def modified_registration_contract(
         registration_code,
     )
     assert modified_registration_code != registration_code
-    contract_bytecode = compiler.compile(modified_registration_code)
+    contract_bytecode = compiler.compile_code(modified_registration_code)['bytecode']
     contract_abi = compiler.mk_full_signature(modified_registration_code)
     registration = w3.eth.contract(
         abi=contract_abi,

@@ -11,7 +11,7 @@ deps = {
     ],
     'test': [
         "eth-tester[py-evm]==0.1.0b29",
-        "vyper==0.1.0b4",
+        "vyper==0.1.0b6",
         "web3==4.3.0",
         "pytest==3.6.1",
         "pytest-mock==1.10.0",

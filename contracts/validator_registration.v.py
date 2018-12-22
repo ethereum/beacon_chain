@@ -9,7 +9,7 @@ SECONDS_PER_DAY: constant(uint256) = 86400
 Eth1Deposit: event({previous_receipt_root: bytes32, data: bytes[2064], deposit_count: uint256})
 ChainStart: event({receipt_root: bytes32, time: bytes[8]})
 
-receipt_tree: bytes32[uint256]
+receipt_tree: map(uint256, bytes32)
 deposit_count: uint256
 full_deposit_count: uint256
 
