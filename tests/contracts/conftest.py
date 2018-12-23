@@ -1,4 +1,6 @@
 import os
+import re
+from random import randint
 import pytest
 import eth_tester
 from eth_tester import (
@@ -8,6 +10,12 @@ from eth_tester import (
 from web3.providers.eth_tester import EthereumTesterProvider
 from web3 import Web3
 from vyper import compiler
+
+
+# Constants
+MIN_DEPOSIT = 1  # ETH
+MAX_DEPOSIT = 32  # ETH
+DEPOSIT_CONTRACT_TREE_DEPTH = 32
 
 
 def get_dirs(path):
@@ -45,7 +53,7 @@ def w3(tester):
 
 @pytest.fixture
 def registration_contract(w3, tester, registration_code):
-    contract_bytecode = compiler.compile(registration_code)
+    contract_bytecode = compiler.compile_code(registration_code)['bytecode']
     contract_abi = compiler.mk_full_signature(registration_code)
     registration = w3.eth.contract(
         abi=contract_abi,
@@ -55,6 +63,45 @@ def registration_contract(w3, tester, registration_code):
     registration_deployed = w3.eth.contract(
         address=tx_receipt.contractAddress,
         abi=contract_abi
+    )
+    return registration_deployed
+
+
+@pytest.fixture(scope="session")
+def chain_start_full_deposit_thresholds():
+    return [randint(1, 5), randint(6, 10), randint(11, 15)]
+
+
+@pytest.fixture(params=[0, 1, 2])
+def modified_registration_contract(
+        request,
+        w3,
+        tester,
+        registration_code,
+        chain_start_full_deposit_thresholds):
+    # Set CHAIN_START_FULL_DEPOSIT_THRESHOLD to different threshold t
+    t = str(chain_start_full_deposit_thresholds[request.param])
+    modified_registration_code = re.sub(
+        r'CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant\(uint256\) = [0-9]+',
+        'CHAIN_START_FULL_DEPOSIT_THRESHOLD: constant(uint256) = ' + t,
+        registration_code,
+    )
+    assert modified_registration_code != registration_code
+    contract_bytecode = compiler.compile_code(modified_registration_code)['bytecode']
+    contract_abi = compiler.mk_full_signature(modified_registration_code)
+    registration = w3.eth.contract(
+        abi=contract_abi,
+        bytecode=contract_bytecode)
+    tx_hash = registration.constructor().transact()
+    tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+    registration_deployed = w3.eth.contract(
+        address=tx_receipt.contractAddress,
+        abi=contract_abi
+    )
+    setattr(
+        registration_deployed,
+        'chain_start_full_deposit_threshold',
+        chain_start_full_deposit_thresholds[request.param]
     )
     return registration_deployed
 
