@@ -44,3 +44,16 @@ def deposit(deposit_input: bytes[2048]):
 @constant
 def get_receipt_root() -> bytes32:
     return self.receipt_tree[1]
+
+@public
+@constant
+def get_merkle_branch(index: uint256) -> bytes32[32]: # returned data size is DEPOSIT_CONTRACT_TREE_DEPTH
+    idx: uint256 = index + TWO_TO_POWER_OF_TREE_DEPTH
+    ret: bytes32[32]
+    for i in range(DEPOSIT_CONTRACT_TREE_DEPTH):
+        if idx % 2 == 1:
+            ret[i] = self.receipt_tree[idx - 1]
+        else:
+            ret[i] = self.receipt_tree[idx + 1]
+        idx /= 2
+    return ret
