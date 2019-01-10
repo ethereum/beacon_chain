@@ -8,6 +8,7 @@ from tests.contracts.conftest import (
     MAX_DEPOSIT,
     MIN_DEPOSIT,
     DEPOSIT_CONTRACT_TREE_DEPTH,
+    TWO_TO_POWER_OF_TREE_DEPTH,
 )
 
 
@@ -23,6 +24,23 @@ def compute_merkle_root(w3, leaf_nodes):
             parent_nodes.append(w3.sha3(child_nodes[j] + child_nodes[j+1]))
         child_nodes = parent_nodes
     return child_nodes[0]
+
+
+def verify_merkle_branch(w3, root, index, leaf_node, branch):
+    assert len(root) == 32
+    assert len(branch) == 32
+    node = leaf_node
+    idx = index + TWO_TO_POWER_OF_TREE_DEPTH
+    for sib_node in branch:
+        if idx % 2 == 1:
+            node = w3.sha3(sib_node + node)
+        else:
+            node = w3.sha3(node + sib_node)
+        idx = idx // 2
+    if node == root:
+        return True
+    else:
+        return False
 
 
 @pytest.mark.parametrize(
@@ -89,6 +107,9 @@ def test_reciept_tree(registration_contract, w3, assert_tx_failed):
         leaf_nodes.append(w3.sha3(data))
         root = compute_merkle_root(w3, leaf_nodes)
         assert registration_contract.functions.get_receipt_root().call() == root
+        index = randint(0, i)
+        branch = registration_contract.functions.get_merkle_branch(index).call()
+        assert verify_merkle_branch(w3, root, index, leaf_nodes[index], branch)
 
 
 def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
