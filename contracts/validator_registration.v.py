@@ -28,7 +28,7 @@ def deposit(deposit_input: bytes[2048]):
 
     # add deposit to merkle tree
     self.receipt_tree[index] = sha3(deposit_data)
-    for i in range(32):  # DEPOSIT_CONTRACT_TREE_DEPTH (range of constant var not yet supported)
+    for i in range(DEPOSIT_CONTRACT_TREE_DEPTH):  # DEPOSIT_CONTRACT_TREE_DEPTH (range of constant var not yet supported)
         index /= 2
         self.receipt_tree[index] = sha3(concat(self.receipt_tree[index * 2], self.receipt_tree[index * 2 + 1]))
 
