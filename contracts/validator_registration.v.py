@@ -51,9 +51,6 @@ def get_merkle_branch(index: uint256) -> bytes32[32]: # returned data size is DE
     idx: uint256 = index + TWO_TO_POWER_OF_TREE_DEPTH
     ret: bytes32[32]
     for i in range(DEPOSIT_CONTRACT_TREE_DEPTH):
-        if idx % 2 == 1:
-            ret[i] = self.receipt_tree[idx - 1]
-        else:
-            ret[i] = self.receipt_tree[idx + 1]
+        ret[i] = self.receipt_tree[bitwise_xor(idx,1)]
         idx /= 2
     return ret
