@@ -64,7 +64,7 @@ def test_deposit_amount(registration_contract, w3, success, amount_deposit, asse
 
 
 def test_deposit_log(registration_contract, a0, w3):
-    log_filter = registration_contract.events.Eth1Deposit.createFilter(
+    log_filter = registration_contract.events.Deposit.createFilter(
         fromBlock='latest',
     )
 
@@ -82,11 +82,11 @@ def test_deposit_log(registration_contract, a0, w3):
         amount_bytes8 = deposit_amount[i].to_bytes(8, 'big')
         timestamp_bytes8 = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp']).to_bytes(8, 'big')
         if i == 0:
-            assert log['previous_receipt_root'] == b'\x00' * 32
+            assert log['previous_deposit_root'] == b'\x00' * 32
         else:
-            assert log['previous_receipt_root'] != b'\x00' * 32
+            assert log['previous_deposit_root'] != b'\x00' * 32
         assert log['data'] == amount_bytes8 + timestamp_bytes8 + deposit_input
-        assert log['deposit_count'] == i
+        assert log['merkle_tree_index'] == (i + TWO_TO_POWER_OF_TREE_DEPTH).to_bytes(8, 'big')
 
 
 def test_reciept_tree(registration_contract, w3, assert_tx_failed):
@@ -106,9 +106,9 @@ def test_reciept_tree(registration_contract, w3, assert_tx_failed):
         data = amount_bytes8 + timestamp_bytes8 + deposit_input
         leaf_nodes.append(w3.sha3(data))
         root = compute_merkle_root(w3, leaf_nodes)
-        assert registration_contract.functions.get_receipt_root().call() == root
+        assert registration_contract.functions.get_deposit_root().call() == root
         index = randint(0, i)
-        branch = registration_contract.functions.get_merkle_branch(index).call()
+        branch = registration_contract.functions.get_branch(index).call()
         assert verify_merkle_branch(w3, root, index, leaf_nodes[index], branch)
 
 
@@ -152,7 +152,7 @@ def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
     timestamp = int(w3.eth.getBlock(w3.eth.blockNumber)['timestamp'])
     timestamp_day_boundary = timestamp + (86400 - timestamp % 86400)
     log = logs[0]['args']
-    assert log['receipt_root'] == modified_registration_contract.functions.get_receipt_root().call()
+    assert log['deposit_root'] == modified_registration_contract.functions.get_deposit_root().call()
     assert int.from_bytes(log['time'], byteorder='big') == timestamp_day_boundary
 
     # Make 1 deposit with value MAX_DEPOSIT and check that ChainStart event is not triggered
