@@ -4,6 +4,8 @@ import pytest
 
 import eth_utils
 
+from eth_hash.auto import keccak as hash
+
 from tests.contracts.conftest import (
     MAX_DEPOSIT,
     MIN_DEPOSIT,
@@ -12,7 +14,7 @@ from tests.contracts.conftest import (
 )
 
 
-def compute_merkle_root(w3, leaf_nodes):
+def compute_merkle_root(leaf_nodes):
     assert len(leaf_nodes) >= 1
     empty_node = b'\x00' * 32
     child_nodes = leaf_nodes[:]
@@ -21,26 +23,19 @@ def compute_merkle_root(w3, leaf_nodes):
         if len(child_nodes) % 2 == 1:
             child_nodes.append(empty_node)
         for j in range(0, len(child_nodes), 2):
-            parent_nodes.append(w3.sha3(child_nodes[j] + child_nodes[j+1]))
+            parent_nodes.append(hash(child_nodes[j] + child_nodes[j+1]))
         child_nodes = parent_nodes
     return child_nodes[0]
 
 
-def verify_merkle_branch(w3, root, index, leaf_node, branch):
-    assert len(root) == 32
-    assert len(branch) == 32
-    node = leaf_node
-    idx = index + TWO_TO_POWER_OF_TREE_DEPTH
-    for sib_node in branch:
-        if idx % 2 == 1:
-            node = w3.sha3(sib_node + node)
+def verify_merkle_branch(leaf, branch, depth, index, root):
+    value = leaf
+    for i in range(depth):
+        if index // (2**i) % 2:
+            value = hash(branch[i] + value)
         else:
-            node = w3.sha3(node + sib_node)
-        idx = idx // 2
-    if node == root:
-        return True
-    else:
-        return False
+            value = hash(value + branch[i])
+    return value == root
 
 
 @pytest.mark.parametrize(
@@ -89,7 +84,7 @@ def test_deposit_log(registration_contract, a0, w3):
         assert log['merkle_tree_index'] == (i + TWO_TO_POWER_OF_TREE_DEPTH).to_bytes(8, 'big')
 
 
-def test_reciept_tree(registration_contract, w3, assert_tx_failed):
+def test_receipt_tree(registration_contract, w3, assert_tx_failed):
     deposit_amount = [randint(MIN_DEPOSIT, MAX_DEPOSIT) * eth_utils.denoms.gwei for _ in range(10)]
 
     leaf_nodes = []
@@ -105,11 +100,17 @@ def test_reciept_tree(registration_contract, w3, assert_tx_failed):
         amount_bytes8 = deposit_amount[i].to_bytes(8, 'big')
         data = amount_bytes8 + timestamp_bytes8 + deposit_input
         leaf_nodes.append(w3.sha3(data))
-        root = compute_merkle_root(w3, leaf_nodes)
+        root = compute_merkle_root(leaf_nodes)
         assert registration_contract.functions.get_deposit_root().call() == root
         index = randint(0, i)
         branch = registration_contract.functions.get_branch(index).call()
-        assert verify_merkle_branch(w3, root, index, leaf_nodes[index], branch)
+        assert verify_merkle_branch(
+            leaf_nodes[index],
+            branch,
+            DEPOSIT_CONTRACT_TREE_DEPTH,
+            index,
+            root
+        )
 
 
 def test_chain_start(modified_registration_contract, w3, assert_tx_failed):
