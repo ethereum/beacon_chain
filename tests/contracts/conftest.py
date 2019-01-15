@@ -16,6 +16,7 @@ from vyper import compiler
 MIN_DEPOSIT = 1  # ETH
 MAX_DEPOSIT = 32  # ETH
 DEPOSIT_CONTRACT_TREE_DEPTH = 32
+TWO_TO_POWER_OF_TREE_DEPTH = 4294967296  # 2**32
 
 
 def get_dirs(path):
